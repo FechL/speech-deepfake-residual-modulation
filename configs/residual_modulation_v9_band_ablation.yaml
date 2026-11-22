@@ -1,0 +1,121 @@
+pipeline_version: residual_modulation_v9
+seeds:
+- 2026
+- 2027
+- 2028
+features:
+  sample_rate: 16000
+  min_seconds: 0.3
+  max_seconds: 60
+  trim_db: 35.0
+  active_db: 30.0
+  frame_length: 400
+  hop_length: 160
+  n_fft: 512
+  n_ceps: 20
+  n_filters: 40
+  spectral_cmn: false
+  lpc_order: 16
+  residual_min_energy: 1.0e-08
+  entropy_bins: 64
+  epsilon: 1.0e-12
+  envelope_sr: 100
+  envelope_lowpass_hz: 40
+  envelope_filter_order: 4
+  modulation_max_hz: 20
+  modulation_bands:
+  - - 0.5
+    - 2
+  - - 2
+    - 4
+  - - 4
+    - 8
+  - - 8
+    - 20
+families:
+- MFCC
+- LFCC
+- MFCC_LFCC
+- Residual
+- Modulation
+- Residual_Modulation
+- QC_only
+- Modulation_without_band_0p5_2
+- Modulation_without_band_2_4
+- Modulation_without_band_4_8
+- Modulation_without_band_8_20
+models:
+- lr
+- svm_rbf
+- rf
+- hgb
+- xgb
+reference_classifier: lr
+missing_indicators: false
+complete_case: true
+gmm:
+  enabled: true
+  kinds:
+  - lfcc
+  - mfcc
+  n_components: 64
+  max_frames: 400000
+  max_utterances_per_class: 3000
+model_params:
+  lr:
+    C: 1.0
+    max_iter: 2000
+  svm_rbf:
+    C: 10.0
+    gamma: scale
+  rf:
+    n_estimators: 300
+    min_samples_leaf: 2
+  xgb:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+  knn:
+    n_neighbors: 5
+  mlp:
+    hidden_layer_sizes:
+    - 128
+    - 64
+    max_iter: 500
+  hgb:
+    max_iter: 200
+    max_depth: 3
+    learning_rate: 0.05
+selection_metric: auc
+baseline_family: MFCC_LFCC
+evidence_family: Residual_Modulation
+bootstrap_draws: 1000
+minimum_bootstrap_speakers: 5
+permutation_repeats: 20
+group_cv_folds: 5
+n_jobs: 2
+sensitivity_variants:
+- name: lpc_12
+  lpc_order: 12
+- name: lpc_20
+  lpc_order: 20
+- name: trim_25db
+  trim_db: 25.0
+- name: trim_45db
+  trim_db: 45.0
+- name: no_trim
+  trim_db: null
+- name: noise_snr30
+  noise_snr_db: 30
+- name: noise_snr20
+  noise_snr_db: 20
+- name: noise_snr10
+  noise_snr_db: 10
+- name: mp3_128k
+  mp3_bitrate: 128k
+- name: mp3_64k
+  mp3_bitrate: 64k
+- name: mp3_32k
+  mp3_bitrate: 32k

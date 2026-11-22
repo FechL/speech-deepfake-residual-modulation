@@ -1,0 +1,18 @@
+{
+  "manifests": {
+    "asvspoof2019_la.csv": {
+      "rows": 44655,
+      "sha256": "66d75522b7cc2425459afce3cea1e87adf2fb07894c1360487ce0ac75addb84c"
+    },
+    "asvspoof2021_df.csv": {
+      "rows": 812,
+      "sha256": "3daaa0da59d86d270368e40bcf60ed50c01b37241afd36b67219c9876e732095"
+    },
+    "mlaad_tiny.csv": {
+      "rows": 1906,
+      "sha256": "f5dcaf90b4853c53b20e4750ff85e68fa47d074e5f2f136e93836582e2155d4c"
+    }
+  },
+  "note": "Selection copied from glottal v9; features/models/results not reused.",
+  "source_run": "/home/aliy/Coding/Myrepos/speech-deepfake-glottal/results/forensic_whole_utterance_v9/fe17e2b856dd5d6c"
+}

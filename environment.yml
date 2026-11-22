@@ -1,0 +1,8 @@
+name: speech-deepfake-residual-modulation
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pip
+  - ffmpeg
+  - pip:
+      - -r requirements-dev.txt
