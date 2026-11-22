@@ -183,3 +183,12 @@ def test_mp3_roundtrip_length_when_available():
     assert len(x) == len(y)
     assert np.isfinite(y).all()
     assert 'variant_length_difference_samples' in info
+
+
+def test_preprocessing_follows_glottal_v9(cfg):
+    from src.pipeline_v9.features import preprocess
+    rng = np.random.default_rng(3)
+    x = 0.2 * rng.normal(size=32000) + 0.1
+    y, sr, qc = preprocess(x, 16000, cfg['features'])
+    assert abs(y.mean()) < 1e-6 and abs(np.sqrt(np.mean(y ** 2)) - 1) < 1e-6
+    assert qc['qc_rms'] > 0.1  # RMS before normalisation, not a constant

@@ -44,26 +44,28 @@ def preprocess(raw, original_sr, cfg):
     sr = cfg['sample_rate']
     original_seconds = len(x) / original_sr
     peak = float(np.max(np.abs(x)))
-    if original_sr != sr:
-        x = librosa.resample(x, orig_sr=original_sr, target_sr=sr)
+    # v9 order: centre crop at the original rate, resample, trim, DC removal, RMS scale.
     max_seconds = cfg.get('max_seconds')
     crop_start = 0
-    if max_seconds and len(x) > round(max_seconds * sr):
-        n = round(max_seconds * sr)
+    if max_seconds and len(x) > int(max_seconds * original_sr):
+        n = int(max_seconds * original_sr)
         crop_start = (len(x) - n) // 2
         x = x[crop_start:crop_start + n]
-    crop_seconds = len(x) / sr
+    crop_seconds = len(x) / original_sr
+    if original_sr != sr:
+        x = librosa.resample(x, orig_sr=original_sr, target_sr=sr)
+    # Fully silent audio is kept (all-NaN evidence) instead of raising, as in this project's schema tests.
     if cfg.get('trim_db') is not None and np.max(np.abs(x)) > 0:
         x, _ = librosa.effects.trim(x, top_db=cfg['trim_db'],
                                    frame_length=cfg['frame_length'], hop_length=cfg['hop_length'])
     if len(x) < round(cfg['min_seconds'] * sr):
         raise ValueError('Audio terlalu pendek setelah preprocessing bersama.')
-    scale = float(np.max(np.abs(x)))
-    if scale > 0:
-        x = x / scale
+    x = x - x.mean()
+    rms_before = float(np.sqrt(np.mean(x ** 2)))
+    x = x / max(rms_before, 1e-8)
     qc = {'qc_original_seconds': original_seconds, 'qc_analysis_seconds': len(x) / sr,
-          'qc_crop_start_s': crop_start / sr, 'qc_crop_seconds': crop_seconds,
-          'qc_peak': peak, 'qc_rms': float(np.sqrt(np.mean(x ** 2))),
+          'qc_crop_start_s': crop_start / original_sr, 'qc_crop_seconds': crop_seconds,
+          'qc_peak': peak, 'qc_rms': rms_before,
           'qc_was_cropped': bool(max_seconds and original_seconds > max_seconds)}
     return x, sr, qc
 
@@ -88,7 +90,7 @@ def spectral_features(x, sr, cfg, active):
         mat = np.vstack([cep, delta, delta2]).T[active]
         frame_cache[kind] = mat.astype(np.float32)
         n = cfg['n_ceps']
-        vectors = [mat[:, :n].mean(0), mat[:, :n].std(0), mat[:, n:2*n].std(0), mat[:, 2*n:].std(0)] if len(mat) else [np.full(n, np.nan)] * 4
+        vectors = [mat[:, :n].mean(0), mat[:, :n].std(0), mat[:, n:2*n].std(0), mat[:, 2*n:].std(0)] if len(mat) >= 10 else [np.full(n, np.nan)] * 4
         out.update(zip(spectral_columns(kind, cfg), np.concatenate(vectors)))
     return out, frame_cache
 
@@ -178,7 +180,8 @@ def extract_audio(raw, original_sr, cfg, return_frames=False):
     x, sr, qc = preprocess(raw, original_sr, cfg)
     frames = librosa.util.frame(x, frame_length=cfg['frame_length'], hop_length=cfg['hop_length']).T
     rms = np.sqrt(np.mean(frames ** 2, axis=1))
-    active = (rms > cfg['epsilon']) & (rms >= rms.max() * 10 ** (-cfg['active_db']/20))
+    # v9 rule: 30 dB below the 90th-percentile frame RMS (robust to isolated peaks).
+    active = rms > max(np.percentile(rms, 90) * 10 ** (-cfg['active_db'] / 20), 1e-6)
     spectral, frame_cache = spectral_features(x, sr, cfg, active)
     residual, quality, _ = residual_features(x, cfg)
     modulation, freq, power = modulation_features(x, sr, cfg)

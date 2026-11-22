@@ -60,7 +60,7 @@ gmm:
 model_params:
   lr:
     C: 1.0
-    max_iter: 2000
+    max_iter: 4000
   svm_rbf:
     C: 10.0
     gamma: scale
