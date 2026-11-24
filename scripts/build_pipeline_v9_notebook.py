@@ -90,14 +90,17 @@ run('import-glottal-v9', '--source-run', SOURCE_RUN, '--data-root', DATA_ROOT, '
 manifest = pd.read_csv(MANIFESTS/'manifest.csv', keep_default_na=False)
 expected = sum(v['rows'] for v in json.loads((MANIFESTS/'source_v9.json').read_text())['manifests'].values())
 assert len(manifest) == expected, f'Manifest {len(manifest)} baris, seharusnya {expected}.'
-settings = yaml.safe_load((CODE_ROOT/'configs/residual_modulation_v9.yaml').read_text())
+def apply_profile(cfg):
+    if PROFILE == 'smoke':
+        cfg.update(seeds=[2026], bootstrap_draws=100, permutation_repeats=3)
+        cfg['gmm'].update(n_components=2, max_frames=20000)
+    elif PROFILE != 'full':
+        raise ValueError('PROFILE harus full atau smoke')
+    return cfg
+settings = apply_profile(yaml.safe_load((CODE_ROOT/'configs/residual_modulation_v9.yaml').read_text()))
 if PROFILE == 'smoke':
     manifest = pd.concat([g.sample(1, random_state=2026) for _, g in manifest.groupby(
         ['dataset', 'split', 'speaker_id', 'label', 'attack_id'])], ignore_index=True)
-    settings.update(seeds=[2026], bootstrap_draws=100, permutation_repeats=3)
-    settings['gmm'].update(n_components=2, max_frames=20000)
-elif PROFILE != 'full':
-    raise ValueError('PROFILE harus full atau smoke')
 WORK = WORK_ROOT/PROFILE
 INPUTS = WORK/'inputs'
 MANIFEST, CONFIG = INPUTS/'input_manifest.csv', INPUTS/'config.yaml'
@@ -141,16 +144,46 @@ print('Run:', RUN_ID)
 assert (RUN_DIR/'complete.json').is_file(), f'Run belum lengkap: {RUN_DIR}'
 display(pd.read_csv(RUN_DIR/'seed_summary.csv'))
 display(pd.read_csv(RUN_DIR/'evidence_consistency.csv'))
+# Kontrol shortcut: selisih AUC berpasangan (bootstrap speaker, seed pertama). CI tidak memuat 0 = berbeda.
+ci = pd.read_csv(RUN_DIR/'bootstrap_intervals.csv')
+if 'comparison' in ci:
+    controls = ci[ci.comparison.notna() & ci.status.eq('paired_difference') & ci.metric.eq('auc')
+                  & ci.seed.eq(settings['seeds'][0])]
+    display(controls[['scenario', 'comparison', 'median', 'low', 'high']].round(3))
 print('Hasil lokal:', RUN_DIR)
 print('Hasil di Drive:', BACKUP/'runs'/RUN_ID)
-'''), md(r'''## T07 — sensitivitas opsional setelah model dibekukan
-Mengubah satu faktor (orde LPC 12/20, trimming, noise, MP3) pada subset target yang tetap.
-Semua model dan threshold tetap; GMM tidak disertakan. Ini menguji sensitivitas pengukuran, bukan tuning target.
-Untuk ablation fitur pita modulasi yang dilatih ulang, gunakan config `residual_modulation_v9_band_ablation.yaml`
-sebagai eksperimen development terpisah sebelum evaluasi eksternal final.
-'''), code(r'''# Jalankan jika diperlukan:
-# run('stress', '--run', RUN_DIR, '--features', FEATURES, '--checkpoints', CHECKPOINTS, '--per-cell', 2, '--jobs', N_JOBS)
-# mirror_tree(RUN_DIR/'stress', BACKUP/'runs'/RUN_ID/'stress')
+'''), md(r'''## T07 — sensitivitas setelah model dibekukan (opsional)
+Mengubah satu faktor per varian (orde LPC 12/20, trim 25/45 dB/tanpa trim, noise SNR 30/20/10, MP3 128/64/32 kbps)
+pada subset target yang tetap: `per-cell` utterance per dataset × split × speaker × label × serangan.
+`per-cell 1` = 1.294 utterance × 12 varian (±1,5 jam pada 2 core); `per-cell 2` = 2.336 utterance (±2,5–3 jam).
+Model seed pertama dan threshold tetap; GMM tidak disertakan. Ini menguji sensitivitas pengukuran, bukan tuning target.
+Shard fitur tiap varian dan tabel hasil dicadangkan ke `backup/<PROFILE>/stress/<RUN_ID>/`; menjalankan ulang melanjutkan.
+'''), code(r'''RUN_STRESS = False     # ubah ke True untuk menjalankan
+STRESS_PER_CELL = 1    # 1 ≈ separuh waktu dari 2
+if RUN_STRESS:
+    run('stress', '--run', RUN_DIR, '--features', FEATURES, '--checkpoints', CHECKPOINTS,
+        '--per-cell', STRESS_PER_CELL, '--jobs', N_JOBS, '--backup', BACKUP/'stress'/RUN_ID)
+    display(pd.read_csv(RUN_DIR/'stress'/'variant_status.csv'))
+    metrics = pd.read_csv(RUN_DIR/'stress'/'metrics.csv')
+    display(metrics.pivot_table(index='variant', columns=['dataset', 'system'], values='auc').round(3))
+'''), md(r'''## T08 — ablation pita modulasi (opsional, ±1,5–2 jam training, tanpa ekstraksi ulang)
+Melatih ulang dengan `configs/residual_modulation_v9_band_ablation.yaml`: model modulasi tanpa satu fitur energi pita.
+Fitur memakai cache T04 yang sama. Centroid/entropy tetap membawa informasi spektrum penuh, jadi ini ablation fitur pita,
+bukan penghapusan informasi frekuensi. Eksperimen development terpisah; jangan memilih konfigurasi dari hasil eksternal.
+'''), code(r'''RUN_ABLATION = False   # ubah ke True untuk menjalankan
+if RUN_ABLATION:
+    ABLATION_CONFIG = INPUTS/'config_band_ablation.yaml'
+    ABLATION_CONFIG.write_text(yaml.safe_dump(apply_profile(yaml.safe_load(
+        (CODE_ROOT/'configs/residual_modulation_v9_band_ablation.yaml').read_text())), sort_keys=False))
+    mirror_tree(INPUTS, BACKUP/'inputs')
+    ABLATION_RUNS = WORK/'runs_band_ablation'
+    run('run', '--features', FEATURES, '--config', ABLATION_CONFIG, '--out', ABLATION_RUNS,
+        '--checkpoints', WORK/'checkpoints_band_ablation', '--backup', BACKUP/'band_ablation')
+    ABLATION_DIR = ABLATION_RUNS/(ABLATION_RUNS/'LATEST_RUN').read_text().strip()
+    summary = pd.read_csv(ABLATION_DIR/'seed_summary.csv')
+    display(summary[summary.system.str.startswith('Modulation')].pivot_table(
+        index='system', columns='scenario', values='auc_mean').round(3))
+    print('Hasil ablation di Drive:', BACKUP/'band_ablation'/'runs'/ABLATION_DIR.name)
 ''')]
 
 

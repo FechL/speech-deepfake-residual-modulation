@@ -135,9 +135,14 @@ Bandingkan keluarga dengan classifier yang sama melalui `reference_classifier: l
 
 ## Ablation dan statistik
 
+**Kontrol shortcut QC.** Pada run penuh pertama (`f43e495fc52a38ff`), `QC_only` (durasi, level, rasio frame aktif) mencapai AUC 0,877 di LA 2019 eval, lebih tinggi dari semua family lain; glottal v9 menunjukkan hal yang sama (0,87). Karena itu config utama menambahkan `QC_plus_Residual_Modulation` dan `QC_plus_MFCC_LFCC` (gabungan family, didefinisikan di `composite_families` pada YAML) serta `paired_comparisons` terhadap `QC_only` dengan LR dan HGB. Selisih AUC berpasangan dengan CI bootstrap speaker ada di `bootstrap_intervals.csv` (kolom `comparison`). Pertanyaannya: apakah residual+modulasi menambah informasi di luar shortcut durasi/level?
+
+**Penjaga cache fitur.** Modul `audio_io`, `channels`, `common`, `extraction`, dan `features` menentukan identitas cache fitur. Mengubahnya membuat seluruh 47.373 utterance diekstrak ulang (±5 jam di Colab). `tests/feature_code_pins.json` mencatat hash-nya; tes gagal bila modul itu berubah tanpa memperbarui pin secara sengaja. Family, classifier, statistik, dan gambar dapat diubah tanpa ekstraksi ulang.
+
+
 Residual-only, modulation-only, dan residual+modulasi sudah ada di config utama. Config `residual_modulation_v9_band_ablation.yaml` menambahkan penghilangan satu fitur energi pita pada model modulasi. Centroid/entropy tetap mengandung informasi spektrum penuh: ini **ablation fitur pita**, bukan penghapusan informasi frekuensi total. Gunakan anggaran model yang sama dan pilih dari train/dev sebelum membaca hasil eksternal.
 
-`stress` mengubah satu faktor orde LPC 12/20, trim 25/45 dB/no trim, noise SNR30/20/10, atau MP3 128/64/32 kbps pada subset target tetap. Model seed pertama dan threshold tidak dilatih ulang; GMM tidak disertakan. Untuk eksperimen orde LPC dengan retraining, buat config development terpisah sebelum pembekuan eksternal.
+`stress` mengubah satu faktor orde LPC 12/20, trim 25/45 dB/no trim, noise SNR30/20/10, atau MP3 128/64/32 kbps pada subset target tetap (`--backup` mencadangkan shard tiap varian dan tabel hasil). Model seed pertama dan threshold tidak dilatih ulang; GMM tidak disertakan. Untuk eksperimen orde LPC dengan retraining, buat config development terpisah sebelum pembekuan eksternal.
 
 Uji fitur menggunakan Mann–Whitney, rank-biserial (positif = fake cenderung lebih tinggi), FDR BH, dan CI selisih median bootstrap speaker. Uji MWU bersifat deskriptif karena utterance satu speaker dapat berkorelasi. Tidak dipakai sebagai seleksi fitur. CV menggunakan speaker dalam train saja. CI performa AUC/EER/F1 dan selisih sistem memakai resampling speaker berpasangan, minimal 5 speaker teridentifikasi; dukungan lebih kecil dicatat `unsupported`, bukan diganti bootstrap segmen. SD antarseed bukan CI.
 

@@ -40,6 +40,28 @@ families:
 - Modulation
 - Residual_Modulation
 - QC_only
+# Shortcut controls (as v9 QC_plus_G3): does a family add information beyond QC_only
+# (duration, level, active-frame ratio)? Composites are defined here so features.py and
+# the extracted feature cache stay unchanged.
+- QC_plus_Residual_Modulation
+- QC_plus_MFCC_LFCC
+composite_families:
+  QC_plus_Residual_Modulation:
+  - QC_only
+  - Residual_Modulation
+  QC_plus_MFCC_LFCC:
+  - QC_only
+  - MFCC_LFCC
+paired_comparisons:
+- - QC_plus_Residual_Modulation
+  - QC_only
+- - QC_plus_MFCC_LFCC
+  - QC_only
+- - Residual_Modulation
+  - MFCC_LFCC
+paired_classifiers:
+- lr
+- hgb
 models:
 - lr
 - svm_rbf

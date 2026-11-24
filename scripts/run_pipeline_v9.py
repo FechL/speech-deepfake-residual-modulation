@@ -63,6 +63,7 @@ def main():
     q.add_argument('--checkpoints', default=str(ROOT/'checkpoints/residual_modulation_v9'))
     q.add_argument('--per-cell', type=int, default=2)
     q.add_argument('--jobs', type=int, default=1)
+    q.add_argument('--backup', help='Shard backup per variant and a mirror of stress results (e.g. on Drive).')
     q = sub.add_parser('smoke', help='Generate explicitly synthetic signals and run the full pipeline.')
     q.add_argument('--out', default=str(ROOT/'results/smoke'))
     args = p.parse_args()
@@ -111,7 +112,7 @@ def main():
         train_and_evaluate(args.features, args.config, args.out, args.checkpoints, args.allow_failures, args.backup)
     elif args.command == 'stress':
         from src.pipeline_v9.stress import run_stress
-        run_stress(args.run, args.features, args.checkpoints, args.per_cell, args.jobs)
+        run_stress(args.run, args.features, args.checkpoints, args.per_cell, args.jobs, args.backup)
     elif args.command == 'smoke':
         from src.pipeline_v9.smoke import smoke
         smoke(args.out)

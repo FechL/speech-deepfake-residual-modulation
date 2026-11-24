@@ -68,8 +68,10 @@ def make_figures(out, data, scores, cases, cfg, feature_dir):
         axes[0].legend()
         fig.suptitle(f'Residual | {dataset}/{split}')
         save(fig, f'G3_{token}')
-        # Common grid supports varying lengths; CI resamples speakers, not windows.
-        grid = np.linspace(max(.5, 1/frame.qc_analysis_seconds.min()), 20, 80)
+        # Common 0.5-20 Hz grid. An utterance only contributes where its own FFT resolution reaches
+        # (first bin = 1/duration); below that it is NaN, so the 0.5-2 Hz band is shown from the
+        # utterances long enough to resolve it instead of the whole plot starting at the shortest one.
+        grid = np.linspace(.5, 20, 80)
         fig, ax = plt.subplots(figsize=(8, 4))
         table = []
         rng = np.random.default_rng(first_seed)
@@ -80,12 +82,14 @@ def make_figures(out, data, scores, cases, cfg, feature_dir):
                     freq, power = archive['mod_freq'], archive['mod_power']
                 if len(freq) > 1 and np.isfinite(power).all():
                     # density per Hz, rather than power/bin (which depends on duration).
-                    mats.append(np.interp(grid, freq, power/(freq[1]-freq[0])))
+                    mats.append(np.interp(grid, freq, power/(freq[1]-freq[0]), left=np.nan, right=np.nan))
                     speakers.append(str(row.speaker_id))
             if not mats:
                 continue
             mat, speakers = np.array(mats), np.array(speakers)
-            mean = mat.mean(0)
+            n_valid = np.isfinite(mat).sum(0)
+            with np.errstate(all='ignore'):
+                mean = np.where(n_valid > 0, np.nansum(mat, 0) / np.maximum(n_valid, 1), np.nan)
             ax.plot(grid, mean, label=f'{name} (n={len(mat)})')
             unique = np.unique(speakers)
             supported = len(unique) >= cfg['minimum_bootstrap_speakers'] and all('unknown' not in s.lower() for s in unique)
@@ -93,14 +97,16 @@ def make_figures(out, data, scores, cases, cfg, feature_dir):
                 draws = []
                 for _ in range(cfg['bootstrap_draws']):
                     indices = np.concatenate([np.flatnonzero(speakers == g) for g in rng.choice(unique, len(unique), replace=True)])
-                    draws.append(mat[indices].mean(0))
-                low, high = np.percentile(draws, [2.5, 97.5], axis=0)
+                    sample = mat[indices]
+                    count = np.isfinite(sample).sum(0)
+                    draws.append(np.where(count > 0, np.nansum(sample, 0) / np.maximum(count, 1), np.nan))
+                low, high = np.nanpercentile(draws, [2.5, 97.5], axis=0)
                 ax.fill_between(grid, low, high, alpha=.2)
             else:
                 low = high = np.full_like(grid, np.nan)
-            table.extend(dict(label=label, frequency_hz=f, mean_density=m, ci_low=l, ci_high=h,
+            table.extend(dict(label=label, frequency_hz=f, mean_density=m, ci_low=l, ci_high=h, n_utterances=int(n),
                               ci_status='speaker_clustered' if supported else 'unsupported')
-                         for f, m, l, h in zip(grid, mean, low, high))
+                         for f, m, l, h, n in zip(grid, mean, low, high, n_valid))
         ax.set(xlabel='Modulation frequency (Hz)', ylabel='Normalized power density (1/Hz)', title=f'{dataset}/{split}')
         if table:
             ax.legend()

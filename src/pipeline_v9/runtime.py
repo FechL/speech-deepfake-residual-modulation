@@ -8,10 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 from .common import code_identity, digest, file_hash, mirror_tree, runtime_identity, write_csv, write_json
-from .config import load_config
+from .config import load_config, resolve_families
 from .data import leakage_audit
 from .extraction import extract_manifest, load_features  # noqa: F401  (public API)
-from .features import extract_audio, feature_families
 from .evaluation import (consistency, eer, feature_statistics, metric_values, paired_intervals)
 from .training import fit_systems, grouped_cv, score
 from .baseline_gmm import fit_pair, score_pair
@@ -54,9 +53,9 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
         'command': sys.argv, 'excluded_extraction_failures': n_failed,
         'scope': 'available_subset' if n_failed else 'planned', 'source_feature_dir': str(Path(feature_dir).resolve())})
     write_json(out/'leakage_audit.json', audit)
-    write_csv(out/'manifest.csv', data[[c for c in data if c not in set(sum(feature_families(cfg['features']).values(), []))]])
+    write_csv(out/'manifest.csv', data[[c for c in data if c not in set(sum(resolve_families(cfg).values(), []))]])
     train, dev = data[data.split.eq('train')], data[data.split.eq('dev')]
-    families = feature_families(cfg['features'])
+    families = resolve_families(cfg)
     stats_columns = families['Residual_Modulation']
     write_csv(out/'statistical_tests.csv', feature_statistics(train, stats_columns, cfg, cfg['seeds'][0]))
     selections = []
@@ -142,6 +141,15 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
             ci = paired_intervals(frame, systems_ci, cfg['bootstrap_draws'], seed, cfg['minimum_bootstrap_speakers'])
             ci['scenario'], ci['seed'] = scenario, seed
             intervals_all.append(ci)
+            # Configured controls, e.g. does evidence add anything beyond the QC/duration shortcut?
+            for family_a, family_b in cfg.get('paired_comparisons') or []:
+                for clf in cfg.get('paired_classifiers') or [cfg['reference_classifier']]:
+                    ka, kb = f'{family_a}__{clf}', f'{family_b}__{clf}'
+                    pair = paired_intervals(frame, {ka: (wide[ka].to_numpy(), selected[ka]['threshold']),
+                                                    kb: (wide[kb].to_numpy(), selected[kb]['threshold'])},
+                                            cfg['bootstrap_draws'], seed, cfg['minimum_bootstrap_speakers'])
+                    pair['scenario'], pair['seed'], pair['comparison'] = scenario, seed, f'{family_a} vs {family_b} ({clf})'
+                    intervals_all.append(pair)
             cases, summary = consistency(frame, wide[b], wide[e], selected[b]['threshold'], selected[e]['threshold'])
             cases['seed'], cases['scenario'] = seed, scenario
             cases['baseline_system'], cases['evidence_system'] = b, e

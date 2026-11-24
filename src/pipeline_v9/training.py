@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from .evaluation import eer
-from .features import feature_families
+from .config import resolve_families
 
 
 def make_model(kind, cfg, seed):
@@ -56,7 +56,7 @@ def score(spec, frame):
 def fit_systems(train, dev, cfg, seed):
     if set(train.speaker_id) & set(dev.speaker_id):
         raise ValueError('Speaker leakage train/dev.')
-    families = feature_families(cfg['features'])
+    families = resolve_families(cfg)
     systems, rows = {}, []
     for family in cfg['families']:
         columns = families[family]
@@ -85,7 +85,7 @@ def grouped_cv(train, cfg, seed):
     if folds < 2:
         return pd.DataFrame([{'status': 'unsupported_few_speakers'}])
     splitter = StratifiedGroupKFold(n_splits=folds, shuffle=True, random_state=seed)
-    families = feature_families(cfg['features'])
+    families = resolve_families(cfg)
     rows = []
     for fold, (a, b) in enumerate(splitter.split(train, train.label, train.speaker_id)):
         tr, va = train.iloc[a], train.iloc[b]

@@ -5,7 +5,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import yaml
-from .common import digest, file_hash, write_csv, write_json
+from .common import copy_file, digest, file_hash, write_csv, write_json
 from .evaluation import metric_values, paired_intervals
 from .features import feature_families
 from .channels import mp3_available
@@ -13,7 +13,18 @@ from .runtime import extract_manifest, load_features
 from .training import score
 
 
-def run_stress(run, feature_dir, checkpoints_root, per_cell=2, jobs=1):
+def _mirror_results(root, destination):
+    """Copy stress tables/configs (not the per-variant feature folders, backed up as shards)."""
+    for path in sorted(root.rglob('*')):
+        relative = path.relative_to(root)
+        if path.is_file() and 'features' not in relative.parts[:-1]:
+            target = destination/relative
+            if not target.is_file() or target.stat().st_size != path.stat().st_size:
+                copy_file(path, target)
+
+
+def run_stress(run, feature_dir, checkpoints_root, per_cell=2, jobs=1, backup=None):
+    """`backup`: shard backup per variant (restored on resume) plus a mirror of the stress results."""
     if per_cell < 1:
         raise ValueError('per-cell harus positif.')
     run = Path(run)
@@ -61,7 +72,8 @@ def run_stress(run, feature_dir, checkpoints_root, per_cell=2, jobs=1):
         # Source is the manifest schema, never a joined feature table.
         manifest = subset[[c for c in ['utterance_id', 'path', 'label', 'speaker_id', 'attack_id', 'split', 'dataset', 'sha256', 'source_id'] if c in subset]]
         write_csv(folder/'manifest.csv', manifest)
-        extracted = extract_manifest(folder/'manifest.csv', config_path, folder/'features', jobs=jobs)
+        extracted = extract_manifest(folder/'manifest.csv', config_path, folder/'features', jobs=jobs,
+                                     backup=None if backup is None else Path(backup)/'features'/name)
         good = extracted.analysis_status.eq('ok')
         if not good.all():
             raise ValueError(f'Stress {name} gagal pada {int((~good).sum())} utterance; lihat failures.csv.')
@@ -95,4 +107,6 @@ def run_stress(run, feature_dir, checkpoints_root, per_cell=2, jobs=1):
         write_csv(root/'variant_status.csv', pd.DataFrame(statuses))
         write_csv(root/'variant_feature_change.csv', pd.DataFrame(changes))
         write_csv(root/'variant_paired_intervals.csv', pd.concat(deltas, ignore_index=True))
+        if backup is not None:
+            _mirror_results(root, Path(backup)/'results')
     print(f'Stress selesai: {root}')

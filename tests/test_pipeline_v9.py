@@ -295,3 +295,24 @@ def test_extraction_shards_backup_restore_and_path_independent_identity(tmp_path
     third = tmp_path/'session3'
     extract_manifest(manifest, config, third, chunk=2, backup=backup)
     assert len(load_features(third)[0]) == 3
+
+
+def test_feature_modules_unchanged_or_cache_invalidation_is_deliberate():
+    """Editing any module in FEATURE_CODE changes the feature-cache identity, so the next run
+    re-extracts all 47k utterances (about 5 h on Colab). If the change is intended, update
+    tests/feature_code_pins.json in the same commit and plan for re-extraction."""
+    import json
+    from src.pipeline_v9.common import feature_code_identity
+    pins = json.loads((ROOT/'tests/feature_code_pins.json').read_text())
+    changed = sorted(k for k, v in feature_code_identity().items() if pins.get(k) != v)
+    assert not changed, f'Modul fitur berubah: {changed}. Ini membatalkan cache fitur; lihat docstring tes.'
+
+
+def test_composite_families_and_paired_controls_from_config(cfg):
+    from src.pipeline_v9.config import resolve_families
+    families = resolve_families(cfg)
+    assert families['QC_plus_Residual_Modulation'] == families['QC_only'] + families['Residual_Modulation']
+    assert set(cfg['families']) <= set(families)
+    bad = dict(cfg, composite_families={'X': ['QC_only', 'nope']})
+    with pytest.raises(ValueError, match='composite'):
+        resolve_families(bad)

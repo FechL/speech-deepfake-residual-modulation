@@ -3,6 +3,20 @@ import yaml
 from .features import feature_families
 
 
+def resolve_families(cfg):
+    """Base families from features.py plus `composite_families` (unions of base families) from config.
+
+    Composites live in config, not in features.py, so adding a control model never changes the
+    feature-extraction code and therefore never invalidates an extracted feature cache.
+    """
+    families = feature_families(cfg['features'])
+    for name, parts in (cfg.get('composite_families') or {}).items():
+        if name in families or not parts or not set(parts) <= set(families):
+            raise ValueError(f'composite_families {name} tidak valid.')
+        families[name] = list(dict.fromkeys(c for part in parts for c in families[part]))
+    return families
+
+
 def load_config(path):
     cfg = yaml.safe_load(Path(path).read_text())
     f = cfg['features']
@@ -10,8 +24,14 @@ def load_config(path):
         raise ValueError('Seed kosong atau duplikat.')
     if cfg['reference_classifier'] not in cfg['models']:
         raise ValueError('reference_classifier harus tersedia pada models.')
-    if not set(cfg['families']) <= set(feature_families(f)):
+    families = resolve_families(cfg)
+    if not set(cfg['families']) <= set(families):
         raise ValueError('Keluarga fitur tidak dikenal.')
+    for pair in cfg.get('paired_comparisons') or []:
+        if len(pair) != 2 or not set(pair) <= set(cfg['families']):
+            raise ValueError(f'paired_comparisons {pair} harus dua family yang dilatih.')
+    if not set(cfg.get('paired_classifiers') or [cfg['reference_classifier']]) <= set(cfg['models']):
+        raise ValueError('paired_classifiers harus tersedia pada models.')
     if not {cfg['baseline_family'], cfg['evidence_family']} <= set(cfg['families']):
         raise ValueError('Baseline/evidence family wajib tersedia.')
     if f['sample_rate'] != 16000 or f['frame_length'] != 400 or f['hop_length'] != 160:
