@@ -192,3 +192,106 @@ def test_preprocessing_follows_glottal_v9(cfg):
     y, sr, qc = preprocess(x, 16000, cfg['features'])
     assert abs(y.mean()) < 1e-6 and abs(np.sqrt(np.mean(y ** 2)) - 1) < 1e-6
     assert qc['qc_rms'] > 0.1  # RMS before normalisation, not a constant
+
+
+def test_audit_is_resumable_and_reports_missing(tmp_path, capsys):
+    import soundfile as sf
+    from src.pipeline_v9.data import audit_audio
+    rows = []
+    for i in range(3):
+        path = tmp_path / f'a{i}.wav'
+        sf.write(path, np.zeros(1600), 16000)
+        rows.append(dict(utterance_id=f'u{i}', path=str(path), label=i % 2, speaker_id=f's{i}',
+                         attack_id='a', split='external', dataset='d'))
+    frame = pd.DataFrame(rows)
+    out = tmp_path / 'audited.csv'
+    first = audit_audio(frame, out, jobs=2, chunk=2)
+    assert first.audio_status.eq('ready').all() and first.sha256.str.len().eq(64).all()
+    capsys.readouterr()
+    second = audit_audio(frame, out, jobs=2)
+    assert '3 dari cache, 0 diperiksa' in capsys.readouterr().out
+    assert second.sha256.tolist() == first.sha256.tolist()
+    frame.loc[3] = dict(utterance_id='u3', path=str(tmp_path / 'missing.wav'), label=0, speaker_id='s3',
+                        attack_id='a', split='external', dataset='d')
+    with pytest.raises(FileNotFoundError, match='1/4'):
+        audit_audio(frame, out)
+
+
+def _wav_manifest(tmp_path, n=3, seconds=1.0):
+    import soundfile as sf
+    rng = np.random.default_rng(7)
+    rows = []
+    for i in range(n):
+        path = tmp_path/'src'/f'u{i}.wav'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        sf.write(path, rng.normal(0, .05, int(16000*seconds)), 16000)
+        rows.append(dict(utterance_id=f'u{i}', path=str(path), label=i % 2, speaker_id=f's{i}',
+                         attack_id='a' if i % 2 else 'bonafide', split='external', dataset='d'))
+    return pd.DataFrame(rows)
+
+
+def test_stage_from_zip_and_files_hashes_written_bytes(tmp_path):
+    import hashlib
+    import zipfile
+    from src.pipeline_v9.stage import stage_audio
+    files = _wav_manifest(tmp_path, n=2)
+    archive = tmp_path/'LA.zip'
+    with zipfile.ZipFile(archive, 'w') as z:
+        for uid in ['LA_T_1', 'LA_T_2', 'LA_T_3']:
+            z.writestr(f'LA/ASVspoof2019_LA_train/flac/{uid}.flac', (tmp_path/'src'/'u0.wav').read_bytes())
+    la = pd.DataFrame([dict(utterance_id=u, path='/drive/nope.flac', label=0, speaker_id='s', attack_id='bonafide',
+                            split='train', dataset='la') for u in ['LA_T_1', 'LA_T_3']])
+    manifest = tmp_path/'manifest.csv'
+    pd.concat([files, la]).to_csv(manifest, index=False)
+    out = tmp_path/'stage'
+    staged = stage_audio(manifest, out, zips={'la': archive}, copy_zip=['la'])
+    assert staged.utterance_id.tolist() == ['u0', 'u1', 'LA_T_1', 'LA_T_3']
+    assert staged.audio_status.eq('ready').all()
+    assert all(Path(p).is_relative_to(out.resolve()) for p in staged.path)
+    for row in staged.itertuples():
+        assert hashlib.sha256(Path(row.path).read_bytes()).hexdigest() == row.sha256
+    assert sorted(p.name for p in (out/'audio'/'la').iterdir()) == ['LA_T_1.flac', 'LA_T_3.flac']
+    assert not (out/'zips'/'LA.zip').exists()  # local archive copy removed after staging
+    assert stage_audio(manifest, out, zips={'la': archive}).sha256.tolist() == staged.sha256.tolist()
+    la.loc[1, 'utterance_id'] = 'LA_T_9'
+    pd.concat([files, la]).to_csv(manifest, index=False)
+    with pytest.raises(FileNotFoundError, match='1/4'):
+        stage_audio(manifest, tmp_path/'stage2', zips={'la': archive})
+
+
+def test_extraction_shards_backup_restore_and_path_independent_identity(tmp_path, cfg):
+    import shutil
+    import yaml
+    from src.pipeline_v9.extraction import extract_manifest, load_features
+    frame = _wav_manifest(tmp_path, n=3)
+    manifest, config = tmp_path/'manifest.csv', tmp_path/'config.yaml'
+    frame.to_csv(manifest, index=False)
+    config.write_text(yaml.safe_dump(cfg))
+    backup = tmp_path/'drive_backup'
+    first = tmp_path/'session1'
+    extract_manifest(manifest, config, first, chunk=2, backup=backup)
+    shards = sorted((first/'shards').glob('*.csv'))
+    assert len(shards) == 2
+    [identity_dir] = list(backup.iterdir())
+    assert sorted(p.name for p in (identity_dir/'shards').iterdir()) == sorted(
+        [p.name for p in shards] + [p.with_suffix('.tar').name for p in shards])
+    reference = load_features(first)[0].set_index('utterance_id')
+    # New session: audio moved to another folder, empty local work dir; everything comes from the backup.
+    moved = tmp_path/'elsewhere'
+    shutil.copytree(tmp_path/'src', moved)
+    frame['path'] = [str(moved/Path(p).name) for p in frame.path]
+    frame.to_csv(manifest, index=False)
+    for f in (tmp_path/'src').iterdir():
+        f.unlink()
+    second = tmp_path/'session2'
+    extract_manifest(manifest, config, second, chunk=2, backup=backup)
+    assert sorted(p.name for p in (second/'shards').glob('*.csv')) == [p.name for p in shards]  # nothing re-extracted
+    restored = load_features(second)[0].set_index('utterance_id')
+    assert np.allclose(restored['res_energy_mean'], reference['res_energy_mean'])
+    assert len(list((second/'frames').glob('*.npz'))) == 3
+    # A corrupt backup shard is skipped and its utterances are extracted again.
+    tar = sorted((identity_dir/'shards').glob('*.tar'))[0]
+    tar.write_bytes(b'not a tar')
+    third = tmp_path/'session3'
+    extract_manifest(manifest, config, third, chunk=2, backup=backup)
+    assert len(load_features(third)[0]) == 3

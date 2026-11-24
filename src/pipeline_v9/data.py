@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import soundfile as sf
 from sklearn.model_selection import GroupShuffleSplit
+from .audio_io import read_audio  # noqa: F401  (re-exported for callers)
 from .common import file_hash, write_csv, write_json
 
 AUDIO_EXT = {'.wav', '.flac', '.mp3', '.ogg', '.m4a', '.opus'}
@@ -67,22 +68,64 @@ def leakage_audit(frame, require_development=True):
             'external_note': 'Cross-dataset does not imply unseen speakers; overlap reported explicitly.'}
 
 
-def audit_audio(frame, out, allow_missing=False):
-    rows = []
-    for row in normalize_manifest(frame).to_dict('records'):
+AUDIT_CACHE_COLUMNS = ['path', 'size_bytes', 'mtime_ns', 'sha256', 'duration_s', 'sample_rate',
+                       'channels', 'audio_status', 'audio_error']
+
+
+def _audit_one(path):
+    path = Path(path)
+    try:
+        stat = path.stat()
+        info = sf.info(path)
+        return dict(path=str(path), size_bytes=stat.st_size, mtime_ns=stat.st_mtime_ns, sha256=file_hash(path),
+                    duration_s=info.duration, sample_rate=info.samplerate, channels=info.channels,
+                    audio_status='ready', audio_error='')
+    except (OSError, RuntimeError) as exc:
+        return dict(path=str(path), size_bytes=-1, mtime_ns=-1, sha256='', duration_s=np.nan,
+                    sample_rate=np.nan, channels=np.nan, audio_status='missing_or_unreadable', audio_error=str(exc))
+
+
+def audit_audio(frame, out, allow_missing=False, jobs=8, chunk=500):
+    """Hash and probe every audio file. Resumable: ready files are cached by path, size and mtime.
+
+    On Drive/Colab each file read is slow, so work runs in threads (I/O bound) and the cache is
+    checkpointed after every chunk; rerunning the same command continues where it stopped.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    frame = normalize_manifest(frame)
+    out = Path(out)
+    cache_path = out.with_name(out.stem + '_cache.csv')
+    cache = {}
+    if cache_path.is_file():
+        old = pd.read_csv(cache_path, keep_default_na=False, dtype={'sha256': str, 'audio_error': str})
+        for row in old[old.audio_status.eq('ready')].to_dict('records'):
+            cache[row['path']] = row
+    paths = list(dict.fromkeys(frame.path.astype(str)))
+
+    def fresh(path):
+        row = cache.get(path)
+        if row is None:
+            return False
         try:
-            path = Path(row['path'])
-            row['sha256'] = file_hash(path)
-            info = sf.info(path)
-            row.update(duration_s=info.duration, sample_rate=info.samplerate, channels=info.channels,
-                       audio_status='ready', audio_error='')
-        except (OSError, RuntimeError) as exc:
-            row.update(audio_status='missing_or_unreadable', audio_error=str(exc))
-        rows.append(row)
-    result = pd.DataFrame(rows)
+            stat = Path(path).stat()
+        except OSError:
+            return False
+        return int(row['size_bytes']) == stat.st_size and int(row['mtime_ns']) == stat.st_mtime_ns
+
+    todo = [p for p in paths if not fresh(p)]
+    print(f'Audit audio: {len(paths) - len(todo)} dari cache, {len(todo)} diperiksa (jobs={jobs}).', flush=True)
+    with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
+        for start in range(0, len(todo), chunk):
+            for row in pool.map(_audit_one, todo[start:start + chunk]):
+                cache[row['path']] = row
+            write_csv(cache_path, pd.DataFrame(list(cache.values()), columns=AUDIT_CACHE_COLUMNS))
+            print(f'  {min(start + chunk, len(todo))}/{len(todo)}', flush=True)
+    found = pd.DataFrame([cache[p] for p in paths], columns=AUDIT_CACHE_COLUMNS)
+    result = frame.drop(columns=['sha256']).merge(found.drop(columns=['size_bytes', 'mtime_ns']), on='path', how='left')
+    result = result[[*frame.columns, *[c for c in result if c not in frame.columns]]]
     write_csv(out, result)
     missing = result.audio_status.ne('ready')
-    write_csv(Path(out).with_name(Path(out).stem + '_missing.csv'), result[missing])
+    write_csv(out.with_name(out.stem + '_missing.csv'), result[missing])
     if missing.any() and not allow_missing:
         raise FileNotFoundError(f'{missing.sum()}/{len(result)} audio tidak tersedia; lihat audit missing. Tidak ada penggantian sampel.')
     return result
@@ -190,11 +233,3 @@ def import_glottal(source_run, data_root, out):
     write_json(out/'source_v9.json', {'source_run': str(source_run), 'manifests': provenance,
                                     'note': 'Selection copied from glottal v9; features/models/results not reused.'})
     return merged
-
-
-def read_audio(path):
-    try:
-        return sf.read(path, always_2d=False)
-    except (RuntimeError, OSError):
-        import librosa
-        return librosa.load(path, sr=None, mono=True)

@@ -18,3 +18,5 @@ checkpoints/**
 figures/**
 exports/**
 !**/.gitkeep
+results/_work/
+backup/

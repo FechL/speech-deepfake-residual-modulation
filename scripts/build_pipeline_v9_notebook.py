@@ -13,53 +13,84 @@ def code(text):
     return {'cell_type': 'code', 'metadata': {}, 'source': text.splitlines(keepends=True), 'execution_count': None, 'outputs': []}
 
 
-cells = [md('''# Pipeline v9 — residual dan modulasi (seluruh utterance)
+cells = [md(r'''# Pipeline v9 — residual dan modulasi (seluruh utterance)
 Acuan alur: **glottal v9 saja**. Panduan residual-modulasi menentukan domain bukti.
-Dataset dan split dapat diimpor persis dari manifest run glottal v9. Kode, cache, model, dan hasil milik proyek ini.
+Dataset dan split diimpor persis dari manifest run glottal v9. Kode, cache, model, dan hasil milik proyek ini.
 
-Jalankan T00–T06 berurutan. Setelah runtime terputus, jalankan ulang dengan path yang sama: ekstraksi dapat dilanjutkan.
-Audio yang tidak tersedia dicatat, tidak diganti otomatis. Kode proyek harus sudah disalin ke `PROJECT_ROOT` di Drive.
-'''), code('''# T00 — lokasi proyek dan sumber dataset. Ubah hanya blok ini.
+**Cara kerja di Colab (dirancang ulang 23 Nov 2026).** Semua proses berat berjalan di disk lokal runtime
+(`/content/work`): audio disalin sekali dari zip/folder dataset, fitur dan model ditulis di sana. Drive hanya
+menerima *cadangan tulis-sekali* di `backup/`: shard fitur (CSV + tar frame, ±500 utterance per shard), seed
+model yang sudah dibekukan, dan paket hasil akhir. Tidak ada file besar yang ditulis ulang di Drive.
+
+Jalankan T00–T06 berurutan. Bila runtime terputus, jalankan ulang dari T00: audio di-*stage* ulang (±15–25 menit),
+lalu T04/T05 memulihkan shard dan seed dari `backup/` dan hanya mengerjakan sisanya.
+'''), code(r'''# T00 — lokasi proyek dan sumber dataset. Ubah hanya blok ini.
 from pathlib import Path
-import os, sys, subprocess
+import os, sys, subprocess, shutil, json
 IN_COLAB = 'google.colab' in sys.modules
 if IN_COLAB:
     from google.colab import drive
     drive.mount('/content/drive')
     PROJECT_ROOT = Path('/content/drive/MyDrive/College/speech-deepfake-residual-modulation-new')
     GLOTTAL_ROOT = Path('/content/drive/MyDrive/College/speech-deepfake-glottal')
+    WORK_ROOT = Path('/content/work')            # disk lokal runtime: semua proses berat di sini
 else:
     PROJECT_ROOT = next(p for p in [Path.cwd(), *Path.cwd().parents] if (p/'configs/residual_modulation_v9.yaml').exists())
     GLOTTAL_ROOT = PROJECT_ROOT.parent/'speech-deepfake-glottal'
-CODE_ROOT = PROJECT_ROOT
+    WORK_ROOT = PROJECT_ROOT/'results/_work'
 DATA_ROOT = GLOTTAL_ROOT/'data'
 SOURCE_RUN = GLOTTAL_ROOT/'results/forensic_whole_utterance_v9/fe17e2b856dd5d6c'
-PROFILE = 'full'       # full = exact imported v9 selection; smoke = 1 utterance/cell, explicitly a subset
-N_JOBS = 2
+PROFILE = 'full'       # full = pilihan v9 persis; smoke = 1 utterance/sel, subset eksplisit
+N_JOBS = os.cpu_count() or 2                     # tidak memengaruhi identitas cache
+BACKUP = PROJECT_ROOT/'backup'/PROFILE            # satu-satunya tujuan tulis di Drive
+CODE_ROOT = PROJECT_ROOT
 RUNNER = CODE_ROOT/'scripts/run_pipeline_v9.py'
 assert RUNNER.is_file(), f'Salin src/, scripts/, configs/, requirements.txt ke {CODE_ROOT}'
 assert PROJECT_ROOT.resolve() != GLOTTAL_ROOT.resolve(), 'Output wajib berada pada proyek residual-modulasi.'
-print('Kode/hasil:', PROJECT_ROOT, '\\nData:', DATA_ROOT)
-'''), code('''# T01 — environment
+WORK_ROOT.mkdir(parents=True, exist_ok=True)
+free_gb = shutil.disk_usage(WORK_ROOT).free / 1e9
+print(f'Kode: {PROJECT_ROOT}\nData: {DATA_ROOT}\nKerja lokal: {WORK_ROOT} ({free_gb:.0f} GB kosong)\nCadangan: {BACKUP}\nN_JOBS={N_JOBS}')
+assert free_gb > 30, 'Disk lokal < 30 GB; gunakan runtime baru.'
+'''), code(r'''# T00b — cek Drive akun Colab SEBELUM bekerja berjam-jam (Colab saja).
+# File yang ditulis Colab memakai kuota akun yang login di Colab, walau foldernya milik akun lain.
+# Uji ini mengunggah 1 MB lalu menghapusnya; kuota penuh langsung terdeteksi (storageQuotaExceeded).
+if IN_COLAB:
+    from google.colab import auth
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+    from googleapiclient.http import MediaInMemoryUpload
+    auth.authenticate_user()
+    api = build('drive', 'v3')
+    me = api.about().get(fields='user(emailAddress)').execute()['user']['emailAddress']
+    try:
+        test = api.files().create(body={'name': '.colab_quota_test'}, media_body=MediaInMemoryUpload(os.urandom(1 << 20)),
+                                  fields='id').execute()
+        api.files().delete(fileId=test['id']).execute()
+    except HttpError as error:
+        raise SystemExit(f'Drive akun Colab ({me}) menolak file baru: {error}.\n'
+                         'Kosongkan kuota akun ini (termasuk Sampah) atau login Colab dengan akun pemilik folder.')
+    shortcut = '.shortcut-targets-by-id' in str(PROJECT_ROOT.resolve())
+    print(f'Akun Colab: {me} — unggah uji OK.' + (' Folder proyek adalah shortcut milik akun lain; cadangan tetap '
+          'memakai kuota akun Colab (±8–10 GB untuk run penuh).' if shortcut else ''))
+'''), code(r'''# T01 — environment
 subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', '-r', str(CODE_ROOT/'requirements.txt')], check=True)
 os.chdir(CODE_ROOT)
 sys.path.insert(0, str(CODE_ROOT))
 def run(*args):
     subprocess.run([sys.executable, str(RUNNER), *map(str, args)], check=True, cwd=CODE_ROOT)
 run('--help')
-'''), md('''## T02 — manifest yang sama dengan glottal v9
-Importer hanya membaca `manifests/*.csv` dari run v9 terpilih dan mengabaikan `_la_protocol_full.csv`.
-ID, label, dataset, dan split dipertahankan; path runtime lama dipetakan ke `DATA_ROOT`.
-Untuk dataset baru, buat manifest lewat CLI `manifest-la` atau `manifest-folder`, lalu gunakan schema yang sama.
-'''), code('''import pandas as pd
+'''), md(r'''## T02 — manifest yang sama dengan glottal v9
+Importer hanya membaca `manifests/*.csv` dari run v9 terpilih (ID, label, dataset, split dipertahankan).
+Manifest dibuat di disk lokal dan jumlah barisnya diperiksa; salinannya disimpan ke `backup/inputs`.
+'''), code(r'''import pandas as pd
 import yaml
-from src.pipeline_v9.common import write_csv, write_json, file_hash
-MANIFEST_ROOT = PROJECT_ROOT/'manifests/glottal_v9'
-run('import-glottal-v9', '--source-run', SOURCE_RUN, '--data-root', DATA_ROOT, '--out', MANIFEST_ROOT)
-manifest = pd.read_csv(MANIFEST_ROOT/'manifest.csv', keep_default_na=False)
+from src.pipeline_v9.common import write_csv, write_json, file_hash, mirror_tree
+MANIFESTS = WORK_ROOT/'manifests'
+run('import-glottal-v9', '--source-run', SOURCE_RUN, '--data-root', DATA_ROOT, '--out', MANIFESTS)
+manifest = pd.read_csv(MANIFESTS/'manifest.csv', keep_default_na=False)
+expected = sum(v['rows'] for v in json.loads((MANIFESTS/'source_v9.json').read_text())['manifests'].values())
+assert len(manifest) == expected, f'Manifest {len(manifest)} baris, seharusnya {expected}.'
 settings = yaml.safe_load((CODE_ROOT/'configs/residual_modulation_v9.yaml').read_text())
-WORK = PROJECT_ROOT/'results/residual_modulation_v9'/PROFILE
-WORK.mkdir(parents=True, exist_ok=True)
 if PROFILE == 'smoke':
     manifest = pd.concat([g.sample(1, random_state=2026) for _, g in manifest.groupby(
         ['dataset', 'split', 'speaker_id', 'label', 'attack_id'])], ignore_index=True)
@@ -67,46 +98,59 @@ if PROFILE == 'smoke':
     settings['gmm'].update(n_components=2, max_frames=20000)
 elif PROFILE != 'full':
     raise ValueError('PROFILE harus full atau smoke')
-MANIFEST = WORK/'input_manifest.csv'
-CONFIG = WORK/'config.yaml'
+WORK = WORK_ROOT/PROFILE
+INPUTS = WORK/'inputs'
+MANIFEST, CONFIG = INPUTS/'input_manifest.csv', INPUTS/'config.yaml'
 write_csv(MANIFEST, manifest)
 CONFIG.write_text(yaml.safe_dump(settings, sort_keys=False))
-write_json(WORK/'selection.json', {'profile': PROFILE, 'source_run': str(SOURCE_RUN),
-    'source_manifest_sha256': file_hash(MANIFEST_ROOT/'manifest.csv'), 'n': len(manifest)})
+shutil.copyfile(MANIFESTS/'source_v9.json', INPUTS/'source_v9.json')
+write_json(INPUTS/'selection.json', {'profile': PROFILE, 'source_run': str(SOURCE_RUN),
+    'source_manifest_sha256': file_hash(MANIFESTS/'manifest.csv'), 'n': len(manifest)})
+mirror_tree(INPUTS, BACKUP/'inputs')
 print(manifest.groupby(['dataset', 'split', 'label']).size())
-'''), code('''# T03 — audit audio dan leakage. Berhenti bila input belum lengkap.
-AUDITED = WORK/'audited_manifest.csv'
-run('audit', '--manifest', MANIFEST, '--out', AUDITED)
-'''), code('''# T04 — ekstraksi resumable seluruh utterance; cache dipisah menurut identitas config/audio/kode.
-FEATURE_DIR = WORK/'features'
-run('extract', '--manifest', AUDITED, '--config', CONFIG, '--out', FEATURE_DIR, '--jobs', N_JOBS)
-display(pd.read_csv(FEATURE_DIR/'coverage.csv'))
-'''), code('''# T05 — train/dev, freeze semua seed, baru evaluasi target dan laporan G1–G7.
-CHECKPOINTS = PROJECT_ROOT/'checkpoints/residual_modulation_v9'
-RUNS = WORK/'runs'
-run('run', '--features', FEATURE_DIR, '--config', CONFIG, '--out', RUNS, '--checkpoints', CHECKPOINTS)
-'''), code('''# T06 — ringkasan; SD antarseed berbeda dari CI bootstrap speaker.
-import json
-from src.pipeline_v9.common import digest, code_identity, runtime_identity
-feature_identity = json.loads((FEATURE_DIR/'extraction_identity.json').read_text())
-identity = {'config': settings, 'feature_identity': feature_identity['identity_hash'],
-    'code': code_identity(), 'runtime': runtime_identity(),
-    'feature_table_sha256': file_hash(FEATURE_DIR/'features.csv'),
-    'manifest_sha256': file_hash(FEATURE_DIR/'manifest.csv'), 'allow_failures': False}
-RUN_DIR = RUNS/digest(identity)[:16]
+print('Total:', len(manifest))
+'''), md(r'''## T03 — stage audio ke disk lokal + audit
+LA 2019 dibaca dari `LA.zip` yang disalin ke disk lokal (satu bacaan berurutan 7,6 GB jauh lebih cepat daripada
+44 ribu file kecil di Drive). DF 2021 dibaca langsung dari `DF.zip` (hanya 812 file). MLAAD disalin per file.
+SHA-256 dihitung dari byte yang ditulis, lalu dicek kebocoran speaker/audio. Tidak ada yang ditulis ke folder glottal.
+'''), code(r'''STAGE = WORK_ROOT/'stage'
+run('stage', '--manifest', MANIFEST, '--out', STAGE,
+    '--zip', f"asvspoof2019_la={DATA_ROOT/'external/asvspoof2019_la/LA.zip'}",
+    '--zip', f"asvspoof2021_df={DATA_ROOT/'external/asvspoof2021_df/DF.zip'}",
+    *(['--copy-zip', 'asvspoof2019_la'] if PROFILE == 'full' else []), '--jobs', 16)
+STAGED = STAGE/'staged_manifest.csv'
+staged = pd.read_csv(STAGED, keep_default_na=False)
+assert len(staged) == len(manifest) and staged.audio_status.eq('ready').all()
+for name in ['staged_manifest.csv', 'staged_manifest.json']:
+    shutil.copyfile(STAGE/name, INPUTS/name)
+mirror_tree(INPUTS, BACKUP/'inputs')
+print('Audio siap:', len(staged), '| disk kosong:', f'{shutil.disk_usage(WORK_ROOT).free / 1e9:.0f} GB')
+'''), code(r'''# T04 — ekstraksi seluruh utterance. Shard tulis-sekali dicadangkan ke Drive dan dipulihkan saat dilanjutkan.
+FEATURES = WORK/'features'
+run('extract', '--manifest', STAGED, '--config', CONFIG, '--out', FEATURES,
+    '--jobs', N_JOBS, '--chunk', 500, '--backup', BACKUP/'features')
+display(pd.read_csv(FEATURES/'coverage.csv'))
+'''), code(r'''# T05 — train/dev, bekukan semua seed, baru evaluasi target dan laporan G1–G7.
+# Seed yang sudah beku langsung dicadangkan; paket hasil disalin ke Drive setelah selesai.
+RUNS, CHECKPOINTS = WORK/'runs', WORK/'checkpoints'
+run('run', '--features', FEATURES, '--config', CONFIG, '--out', RUNS, '--checkpoints', CHECKPOINTS, '--backup', BACKUP)
+RUN_ID = (RUNS/'LATEST_RUN').read_text().strip()
+RUN_DIR = RUNS/RUN_ID
+print('Run:', RUN_ID)
+'''), code(r'''# T06 — ringkasan; SD antarseed berbeda dari CI bootstrap speaker.
 assert (RUN_DIR/'complete.json').is_file(), f'Run belum lengkap: {RUN_DIR}'
 display(pd.read_csv(RUN_DIR/'seed_summary.csv'))
 display(pd.read_csv(RUN_DIR/'evidence_consistency.csv'))
-print('Hasil:', RUN_DIR)
-print('Gambar:', RUN_DIR/'figures')
-'''), md('''## T07 — sensitivitas opsional setelah model dibekukan
-Mengubah satu faktor (orde LPC 12/20, trimming, noise) pada subset target yang tetap.
+print('Hasil lokal:', RUN_DIR)
+print('Hasil di Drive:', BACKUP/'runs'/RUN_ID)
+'''), md(r'''## T07 — sensitivitas opsional setelah model dibekukan
+Mengubah satu faktor (orde LPC 12/20, trimming, noise, MP3) pada subset target yang tetap.
 Semua model dan threshold tetap; GMM tidak disertakan. Ini menguji sensitivitas pengukuran, bukan tuning target.
 Untuk ablation fitur pita modulasi yang dilatih ulang, gunakan config `residual_modulation_v9_band_ablation.yaml`
 sebagai eksperimen development terpisah sebelum evaluasi eksternal final.
-'''), code('''# Jalankan jika diperlukan:
-# run('stress', '--run', RUN_DIR, '--features', FEATURE_DIR,
-#     '--checkpoints', CHECKPOINTS, '--per-cell', 2, '--jobs', N_JOBS)
+'''), code(r'''# Jalankan jika diperlukan:
+# run('stress', '--run', RUN_DIR, '--features', FEATURES, '--checkpoints', CHECKPOINTS, '--per-cell', 2, '--jobs', N_JOBS)
+# mirror_tree(RUN_DIR/'stress', BACKUP/'runs'/RUN_ID/'stress')
 ''')]
 
 
@@ -123,7 +167,7 @@ if __name__ == '__main__':
     write_notebook(ROOT/'notebooks/pipeline_forensic_whole_utterance_v9.ipynb', cells)
     write_notebook(ROOT/'notebooks/setup/setup_dataset_v9.ipynb', [md('''# Setup dataset v9
 Gunakan dataset yang sama dengan glottal v9. Tidak ada pengunduhan atau perubahan audio sumber.
-Jalankan notebook utama T00–T03 untuk impor manifest dan audit. File yang hilang harus disediakan pada path audit,
+Jalankan notebook utama T00–T03 untuk impor manifest, staging audio, dan audit. File yang hilang harus disediakan pada path audit,
 bukan diganti dengan utterance lain. DEEP-VOICE opsional membutuhkan metadata speaker terverifikasi sebelum group split.
 '''), code('''from pathlib import Path
 import subprocess, sys

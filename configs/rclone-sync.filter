@@ -1,0 +1,59 @@
+# Rclone --filter-from rules: code, config, docs, CSV/JSON, figures and model files.
+# First match wins. Audio, frame caches (.npz/.npy) and archives are never transferred.
+- .git/
+- .venv/
+- .env
+- .cache/
+- __pycache__/
+- .pytest_cache/
+- .ipynb_checkpoints/
+- *.lock
+- *.tmp
+- .gitkeep
+- configs/kaggle.json
+- configs/token_huggingface.txt
+- results/synthetic_smoke/**
+- results/_work/**
+# Feature shard backups are restore material for Colab, not needed locally (several GB).
+- backup/*/features/**
+- *.flac
+- *.wav
+- *.mp3
+- *.m4a
+- *.ogg
+- *.opus
+- *.mp4
+- *.npy
+- *.npz
+- *.tar
+- *.gz
+- *.zip
+- *.7z
+
++ */
+
++ checkpoints/**
++ *.joblib
++ README*
++ LICENSE*
++ *.csv
++ *.txt
++ *.json
++ *.jsonl
++ *.yaml
++ *.yml
++ *.md
++ *.pdf
++ *.docx
++ *.tex
++ *.bib
++ *.toml
++ *.ini
++ *.cfg
++ *.png
++ *.svg
++ *.py
++ *.ipynb
++ *.sh
+
+- **

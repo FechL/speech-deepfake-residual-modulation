@@ -70,11 +70,13 @@ Tahap utama setelah audio tersedia:
 
 ```bash
 # 1. Audit checksum, header, speaker/utterance/source/hash leakage.
+#    (Alternatif: `stage` menyalin audio terpilih ke folder lokal dari zip/folder, lalu mengaudit.)
 python scripts/run_pipeline_v9.py audit \
   --manifest manifests/glottal_v9/manifest.csv \
   --out manifests/glottal_v9/audited_manifest.csv
 
-# 2. Ekstraksi seluruh utterance, dapat dilanjutkan dengan command yang sama.
+# 2. Ekstraksi seluruh utterance dalam shard tulis-sekali; dapat dilanjutkan dengan command yang sama.
+#    Tambahkan --backup <folder> untuk mencadangkan setiap shard dan memulihkannya pada sesi baru.
 python scripts/run_pipeline_v9.py extract \
   --manifest manifests/glottal_v9/audited_manifest.csv \
   --config configs/residual_modulation_v9.yaml \
@@ -103,9 +105,22 @@ Perintah ini membuat **40 sinyal sintetis**, tiga seed, lima classifier, dua GMM
 
 ## Menjalankan Colab
 
-Buka `notebooks/pipeline_forensic_whole_utterance_v9.ipynb`. Salin kode proyek ini ke folder Drive residual-modulasi, atur `PROJECT_ROOT`, `GLOTTAL_ROOT`, `DATA_ROOT`, dan `SOURCE_RUN` pada T00, lalu jalankan T00–T06. Kode serta hasil berada di proyek baru; audio tetap menggunakan lokasi dataset yang sama. Notebook tidak berisi token, URL repo yang ditebak, atau kode inti yang diduplikasi.
+Buka `notebooks/pipeline_forensic_whole_utterance_v9.ipynb`, atur path pada T00, lalu jalankan T00–T06 berurutan. Kode dibaca dari folder proyek di Drive dan audio dari folder dataset glottal. Notebook tidak berisi token atau kode inti yang diduplikasi.
 
-`PROFILE='full'` mempertahankan pilihan sampel v9. `PROFILE='smoke'` membuat subset eksplisit dan konfigurasi kecil; hasilnya tidak boleh dilabeli eksperimen penuh. Ubah profil sebelum analisis target konfirmatori. Untuk mempercepat Drive, staging dataset ke disk `/content` dapat dilakukan terlebih dahulu lalu arahkan `DATA_ROOT` ke staging tersebut. Cache fitur dan frame tetap disimpan di folder hasil proyek agar dapat dilanjutkan.
+Alurnya dirancang agar tahan putus dan tidak membebani Drive:
+
+| Lokasi | Isi |
+| --- | --- |
+| `/content/work` (disk lokal runtime) | manifest, audio hasil staging, fitur, frame, model, dan hasil; semua proses berat |
+| `backup/<PROFILE>/` di Drive | `inputs/` (manifest, config, audit), `features/<identitas>/shards/` (CSV + tar frame per ±500 utterance), `checkpoints/<RUN_ID>/` (seed beku), `runs/<RUN_ID>/` (paket hasil) |
+
+- **T00b** mengunggah 1 MB uji ke Drive akun Colab lalu menghapusnya. Kuota penuh langsung terdeteksi sebelum bekerja berjam-jam. File yang ditulis Colab memakai kuota **akun yang login di Colab**, walau foldernya milik akun lain (shortcut).
+- **T03 `stage`** menyalin hanya utterance terpilih ke disk lokal: LA dari `LA.zip` yang disalin lokal lebih dulu, DF langsung dari `DF.zip`, MLAAD per file. SHA-256 dihitung dari byte yang ditulis dan menjadi dasar identitas cache. Folder glottal hanya dibaca.
+- **T04 `extract --backup`** menulis shard tulis-sekali. Tidak ada file besar yang ditulis ulang di Drive, sehingga tidak menumpuk revisi atau antrean upload. Sesi baru memulihkan shard dari cadangan dan hanya mengekstrak sisanya.
+- **T05 `run --backup`** mencadangkan setiap seed yang sudah beku dan paket hasil akhir; sesi baru memulihkannya.
+- Identitas cache fitur hanya bergantung pada byte audio, pengaturan fitur, modul penghitung fitur (`audio_io`, `channels`, `common`, `extraction`, `features`), dan versi library numerik. Path, lokasi folder kerja, atau perbaikan kode training/laporan tidak membatalkan cache.
+
+Bila runtime terputus, jalankan ulang dari T00. Staging audio diulang (±15–25 menit), lalu T04/T05 melanjutkan dari cadangan. `PROFILE='full'` mempertahankan pilihan sampel v9. `PROFILE='smoke'` membuat subset eksplisit dan konfigurasi kecil; hasilnya tidak boleh dilabeli eksperimen penuh.
 
 ## Fitur dan kontrol v9
 
@@ -139,6 +154,6 @@ MLAAD source-speaker ID bukan bukti identitas suara keluaran sintesis. Cross-dat
 - `figures/G1…G7*.png`, data spektrum G4 dan indeks contoh QC G2.
 - `complete.json` dengan checksum paket hasil.
 
-Model, imputer, scaler, daftar fitur, dan threshold ada di `checkpoints/residual_modulation_v9/<RUN_ID>/seed_<SEED>/`, bersama `freeze.json`. Cache terikat checksum manifest/audio, konfigurasi, kode, serta versi library; perubahan identitas memerlukan output ekstraksi baru. Perintah yang sama dapat melanjutkan cache yang identik.
+Model, imputer, scaler, daftar fitur, dan threshold ada di `checkpoints/residual_modulation_v9/<RUN_ID>/seed_<SEED>/`, bersama `freeze.json`. Cache fitur terikat checksum audio, pengaturan fitur, modul penghitung fitur, serta versi library numerik; perubahan identitas memerlukan output ekstraksi baru. Run training terikat identitas fitur, tabel fitur, manifest, seluruh kode, dan config. Perintah yang sama dapat melanjutkan cache yang identik.
 
 Seperti v9, keputusan utama menggunakan fitur seluruh utterance, bukan agregasi segmen 2 detik. Karena itu tidak dibuat `segment_scores.csv` yang menyiratkan pipeline segmentasi panduan telah dijalankan. Penjelasan pemetaan lengkap ada di `docs/AI-context/pemetaan-v9-panduan.md`.

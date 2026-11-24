@@ -1,4 +1,4 @@
-"""Resumable extraction, immutable development bundles, and target-only evaluation."""
+"""Immutable development bundles and target-only evaluation (extraction lives in extraction.py)."""
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -7,106 +7,19 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
-from .common import code_identity, digest, file_hash, runtime_identity, write_csv, write_json
+from .common import code_identity, digest, file_hash, mirror_tree, runtime_identity, write_csv, write_json
 from .config import load_config
-from .data import leakage_audit, normalize_manifest, read_audio
+from .data import leakage_audit
+from .extraction import extract_manifest, load_features  # noqa: F401  (public API)
 from .features import extract_audio, feature_families
 from .evaluation import (consistency, eer, feature_statistics, metric_values, paired_intervals)
 from .training import fit_systems, grouped_cv, score
-from .baseline_gmm import cache_path, fit_pair, score_pair
+from .baseline_gmm import fit_pair, score_pair
 
 
-def extract_manifest(manifest_path, config_path, out, jobs=1, chunk=32):
-    from joblib import Parallel, delayed
-    cfg = load_config(config_path)
-    manifest = normalize_manifest(pd.read_csv(manifest_path, keep_default_na=False))
-    out = Path(out)
-    out.mkdir(parents=True, exist_ok=True)
-    # Actual content hashes, including when reusing cache; no stale stat-only cache.
-    actual_hashes = {}
-    for row in manifest.itertuples():
-        try:
-            actual = file_hash(row.path)
-        except OSError:
-            actual = 'missing'
-        if row.sha256 and actual != row.sha256:
-            raise ValueError(f'Checksum input berubah/tidak tersedia: {row.utterance_id}')
-        actual_hashes[row.utterance_id] = actual
-    identity = {'features': cfg['features'], 'manifest_sha256': file_hash(manifest_path),
-                'audio_sha256': actual_hashes, 'code': code_identity(), 'runtime': runtime_identity()}
-    identity_hash = digest(identity)
-    meta_path = out/'extraction_identity.json'
-    if meta_path.exists() and json.loads(meta_path.read_text())['identity_hash'] != identity_hash:
-        raise ValueError('Identitas cache berbeda. Gunakan folder output baru; cache lama tidak ditimpa.')
-    write_json(meta_path, {'identity_hash': identity_hash, **identity})
-    done = pd.read_csv(out/'features.csv') if (out/'features.csv').exists() else pd.DataFrame(columns=['utterance_id', 'analysis_status'])
-    complete = {uid for uid in done.loc[done.analysis_status.eq('ok'), 'utterance_id'] if cache_path(out, uid).is_file()}
-    todo = manifest[~manifest.utterance_id.isin(complete)]
-    (out/'frames').mkdir(exist_ok=True)
-
-    def one(row):
-        base = {'utterance_id': row['utterance_id'], 'audio_sha256': actual_hashes[row['utterance_id']]}
-        try:
-            if base['audio_sha256'] == 'missing':
-                raise FileNotFoundError(row['path'])
-            raw, sr = read_audio(row['path'])
-            if cfg['features'].get('noise_snr_db') is not None or cfg['features'].get('mp3_bitrate') is not None:
-                from .channels import transform
-                raw, variant_metadata = transform(raw, sr, cfg['features'], row['utterance_id'])
-                base.update(variant_metadata)
-            features, frames = extract_audio(raw, sr, cfg['features'], return_frames=True)
-            target = cache_path(out, row['utterance_id'])
-            with target.with_suffix('.tmp').open('wb') as stream:
-                np.savez_compressed(stream, **frames)
-            target.with_suffix('.tmp').replace(target)
-            base.update(features, extract_error='')
-        except Exception as exc:
-            base.update(analysis_status='error', extract_error=f'{type(exc).__name__}: {exc}')
-        return base
-
-    print(f'{len(complete)} cached; {len(todo)} to extract', flush=True)
-    for start in range(0, len(todo), chunk):
-        rows = Parallel(n_jobs=jobs)(delayed(one)(r) for r in todo.iloc[start:start+chunk].to_dict('records'))
-        part = pd.DataFrame(rows)
-        done = pd.concat([done[~done.utterance_id.isin(part.utterance_id)], part], ignore_index=True)
-        write_csv(out/'features.csv', done)
-        print(f'{min(start+chunk, len(todo))}/{len(todo)}', flush=True)
-    if done.empty:
-        raise ValueError('Manifest kosong.')
-    joined = manifest.merge(done, on='utterance_id', how='left', validate='1:1')
-    coverage = joined.groupby(['dataset', 'split', 'label'], dropna=False).agg(
-        n=('utterance_id', 'size'), extracted=('analysis_status', lambda s: s.eq('ok').sum())).reset_index()
-    coverage['coverage'] = coverage.extracted/coverage.n
-    write_csv(out/'coverage.csv', coverage)
-    write_csv(out/'failures.csv', joined[~joined.analysis_status.eq('ok')])
-    manifest['sha256'] = manifest.utterance_id.map(actual_hashes).replace('missing', '')
-    write_csv(out/'manifest.csv', manifest)
-    write_json(out/'extraction_complete.json', {
-        'feature_table_sha256': file_hash(out/'features.csv'),
-        'manifest_sha256': file_hash(out/'manifest.csv'),
-        'identity_hash': identity_hash})
-    return joined
-
-
-def load_features(folder, allow_failures=False):
-    folder = Path(folder)
-    manifest = normalize_manifest(pd.read_csv(folder/'manifest.csv', keep_default_na=False))
-    identity = json.loads((folder/'extraction_identity.json').read_text())
-    complete = json.loads((folder/'extraction_complete.json').read_text())
-    if (complete['feature_table_sha256'] != file_hash(folder/'features.csv') or
-        complete['manifest_sha256'] != file_hash(folder/'manifest.csv') or
-        complete['identity_hash'] != identity['identity_hash']):
-        raise ValueError('Tabel fitur/manifest cache berubah sejak ekstraksi.')
-    frame = manifest.merge(pd.read_csv(folder/'features.csv'), on='utterance_id', how='left', validate='1:1')
-    invalid = ~frame.analysis_status.eq('ok')
-    if invalid.any() and not allow_failures:
-        raise ValueError(f'{invalid.sum()} ekstraksi gagal; periksa failures.csv. --allow-failures diperlukan untuk subset eksploratif.')
-    if frame.empty:
-        raise ValueError('Fitur kosong.')
-    return frame[~invalid].reset_index(drop=True), identity, int(invalid.sum())
-
-
-def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root, allow_failures=False):
+def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root, allow_failures=False, backup=None):
+    """`backup` (e.g. a Drive folder) receives runs/<id> and checkpoints/<id>: each frozen seed as soon
+    as it exists, the result package at the end. A new session restores frozen seeds from it."""
     cfg = load_config(config_path)
     data, feature_identity, n_failed = load_features(feature_dir, allow_failures)
     if feature_identity['features'] != cfg['features']:
@@ -121,12 +34,21 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
     out, ckpt = Path(results_root)/run_id, Path(checkpoints_root)/run_id
     out.mkdir(parents=True, exist_ok=True)
     ckpt.mkdir(parents=True, exist_ok=True)
+    (Path(results_root)/'LATEST_RUN').write_text(run_id + '\n')
+    if backup is not None:
+        backup = Path(backup)
+        for kind, local in [('runs', out), ('checkpoints', ckpt)]:
+            if (backup/kind/run_id).is_dir():
+                print(f'Memulihkan {mirror_tree(backup/kind/run_id, local)} file {kind} dari cadangan.', flush=True)
     if (out/'complete.json').exists():
         completed = json.loads((out/'complete.json').read_text())
         for relative, checksum in completed['artifacts_sha256'].items():
             if not (out/relative).is_file() or file_hash(out/relative) != checksum:
                 raise ValueError(f'Artifact run selesai berubah: {relative}')
         print(f'Run selesai sebelumnya: {out}', flush=True)
+        if backup is not None:
+            mirror_tree(out, backup/'runs'/run_id)
+            mirror_tree(ckpt, backup/'checkpoints'/run_id)
         return out
     write_json(out/'run_identity.json', {'run_id': run_id, **identity, 'created_utc': datetime.now(timezone.utc).isoformat(),
         'command': sys.argv, 'excluded_extraction_failures': n_failed,
@@ -167,6 +89,8 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
             write_json(destination/'freeze.json', {'run_id': run_id, 'seed': seed,
                 'model_sha256': file_hash(bundle_path), 'champions': champions,
                 'threshold_source': 'dev_only', 'features': {k: v['columns'] for k, v in systems.items()}})
+            if backup is not None:
+                mirror_tree(destination, backup/'checkpoints'/run_id/f'seed_{seed}')
         selections.append(bundle['selection'])
     write_csv(out/'development_selection.csv', pd.concat(selections, ignore_index=True))
     write_csv(out/'grouped_cv.csv', grouped_cv(train, cfg, cfg['seeds'][0]))
@@ -274,5 +198,9 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
     make_figures(out, data, scores_frame, cases, cfg, feature_dir)
     checksums = {str(p.relative_to(out)): file_hash(p) for p in out.rglob('*') if p.is_file() and p.name != 'complete.json'}
     write_json(out/'complete.json', {'run_id': run_id, 'status': 'complete', 'artifacts_sha256': checksums})
+    if backup is not None:
+        mirror_tree(out, backup/'runs'/run_id)
+        mirror_tree(ckpt, backup/'checkpoints'/run_id)
+        print(f'Cadangan hasil: {backup}', flush=True)
     print(f'Completed: {out}', flush=True)
     return out
