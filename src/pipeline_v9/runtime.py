@@ -7,13 +7,29 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
-from .common import code_identity, digest, file_hash, mirror_tree, runtime_identity, write_csv, write_json
+from .common import code_identity, copy_file, digest, file_hash, mirror_tree, runtime_identity, write_csv, write_json
 from .config import load_config, resolve_families
 from .data import leakage_audit
 from .extraction import extract_manifest, load_features  # noqa: F401  (public API)
 from .evaluation import (consistency, eer, feature_statistics, metric_values, paired_intervals)
 from .training import fit_systems, grouped_cv, score
 from .baseline_gmm import fit_pair, score_pair
+
+
+def mirror_exact(source, destination):
+    """Like common.mirror_tree, but also replaces same-size files whose content differs. Run outputs
+    can change in the last float digit between executions (RandomForest parallel summation), so a
+    size-only comparison could leave a stale table next to a newer complete.json."""
+    source, destination = Path(source), Path(destination)
+    copied = 0
+    for path in sorted(source.rglob('*')):
+        if path.is_file():
+            target = destination/path.relative_to(source)
+            if (not target.is_file() or target.stat().st_size != path.stat().st_size
+                    or file_hash(target) != file_hash(path)):
+                copy_file(path, target)
+                copied += 1
+    return copied
 
 
 def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root, allow_failures=False, backup=None):
@@ -34,21 +50,31 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
     out.mkdir(parents=True, exist_ok=True)
     ckpt.mkdir(parents=True, exist_ok=True)
     (Path(results_root)/'LATEST_RUN').write_text(run_id + '\n')
+    restored = False
     if backup is not None:
         backup = Path(backup)
         for kind, local in [('runs', out), ('checkpoints', ckpt)]:
             if (backup/kind/run_id).is_dir():
                 print(f'Memulihkan {mirror_tree(backup/kind/run_id, local)} file {kind} dari cadangan.', flush=True)
+                restored = True
     if (out/'complete.json').exists():
         completed = json.loads((out/'complete.json').read_text())
-        for relative, checksum in completed['artifacts_sha256'].items():
-            if not (out/relative).is_file() or file_hash(out/relative) != checksum:
-                raise ValueError(f'Artifact run selesai berubah: {relative}')
-        print(f'Run selesai sebelumnya: {out}', flush=True)
-        if backup is not None:
-            mirror_tree(out, backup/'runs'/run_id)
-            mirror_tree(ckpt, backup/'checkpoints'/run_id)
-        return out
+        changed = [relative for relative, checksum in completed['artifacts_sha256'].items()
+                   if not (out/relative).is_file() or file_hash(out/relative) != checksum]
+        if changed and not restored:
+            raise ValueError(f'Artifact run selesai berubah: {changed[0]}')
+        if changed:
+            # A backup mixing tables from two executions of the same run: frozen seeds are verified
+            # separately (freeze.json), so evaluation is recomputed and the backup overwritten.
+            print(f'Cadangan run tidak konsisten ({len(changed)} file, mis. {changed[0]}); '
+                  'evaluasi dihitung ulang dari seed beku dan cadangan diperbaiki.', flush=True)
+            (out/'complete.json').unlink()
+        else:
+            print(f'Run selesai sebelumnya: {out}', flush=True)
+            if backup is not None:
+                mirror_exact(out, backup/'runs'/run_id)
+                mirror_exact(ckpt, backup/'checkpoints'/run_id)
+            return out
     write_json(out/'run_identity.json', {'run_id': run_id, **identity, 'created_utc': datetime.now(timezone.utc).isoformat(),
         'command': sys.argv, 'excluded_extraction_failures': n_failed,
         'scope': 'available_subset' if n_failed else 'planned', 'source_feature_dir': str(Path(feature_dir).resolve())})
@@ -89,7 +115,7 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
                 'model_sha256': file_hash(bundle_path), 'champions': champions,
                 'threshold_source': 'dev_only', 'features': {k: v['columns'] for k, v in systems.items()}})
             if backup is not None:
-                mirror_tree(destination, backup/'checkpoints'/run_id/f'seed_{seed}')
+                mirror_exact(destination, backup/'checkpoints'/run_id/f'seed_{seed}')
         selections.append(bundle['selection'])
     write_csv(out/'development_selection.csv', pd.concat(selections, ignore_index=True))
     write_csv(out/'grouped_cv.csv', grouped_cv(train, cfg, cfg['seeds'][0]))
@@ -207,8 +233,8 @@ def train_and_evaluate(feature_dir, config_path, results_root, checkpoints_root,
     checksums = {str(p.relative_to(out)): file_hash(p) for p in out.rglob('*') if p.is_file() and p.name != 'complete.json'}
     write_json(out/'complete.json', {'run_id': run_id, 'status': 'complete', 'artifacts_sha256': checksums})
     if backup is not None:
-        mirror_tree(out, backup/'runs'/run_id)
-        mirror_tree(ckpt, backup/'checkpoints'/run_id)
+        mirror_exact(ckpt, backup/'checkpoints'/run_id)
+        mirror_exact(out, backup/'runs'/run_id)
         print(f'Cadangan hasil: {backup}', flush=True)
     print(f'Completed: {out}', flush=True)
     return out

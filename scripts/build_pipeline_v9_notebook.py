@@ -136,8 +136,16 @@ display(pd.read_csv(FEATURES/'coverage.csv'))
 '''), code(r'''# T05 — train/dev, bekukan semua seed, baru evaluasi target dan laporan G1–G7.
 # Seed yang sudah beku langsung dicadangkan; paket hasil disalin ke Drive setelah selesai.
 RUNS, CHECKPOINTS = WORK/'runs', WORK/'checkpoints'
-run('run', '--features', FEATURES, '--config', CONFIG, '--out', RUNS, '--checkpoints', CHECKPOINTS, '--backup', BACKUP)
-RUN_ID = (RUNS/'LATEST_RUN').read_text().strip()
+# Sesi baru hanya untuk T07/T08? Isi RUN_ID run yang sudah selesai di Drive (mis. '1d5ba7b2b9562c28'):
+# paket hasil dan seed beku disalin dari backup tanpa training/evaluasi ulang. T04 tetap perlu dijalankan.
+RESTORE_RUN_ID = None
+if RESTORE_RUN_ID:
+    mirror_tree(BACKUP/'runs'/RESTORE_RUN_ID, RUNS/RESTORE_RUN_ID)
+    mirror_tree(BACKUP/'checkpoints'/RESTORE_RUN_ID, CHECKPOINTS/RESTORE_RUN_ID)
+    RUN_ID = RESTORE_RUN_ID
+else:
+    run('run', '--features', FEATURES, '--config', CONFIG, '--out', RUNS, '--checkpoints', CHECKPOINTS, '--backup', BACKUP)
+    RUN_ID = (RUNS/'LATEST_RUN').read_text().strip()
 RUN_DIR = RUNS/RUN_ID
 print('Run:', RUN_ID)
 '''), code(r'''# T06 — ringkasan; SD antarseed berbeda dari CI bootstrap speaker.
@@ -150,6 +158,12 @@ if 'comparison' in ci:
     controls = ci[ci.comparison.notna() & ci.status.eq('paired_difference') & ci.metric.eq('auc')
                   & ci.seed.eq(settings['seeds'][0])]
     display(controls[['scenario', 'comparison', 'median', 'low', 'high']].round(3))
+# Analisis shortcut hening/durasi (tanpa training ulang): tabel di RUN_DIR/analysis, disalin ke Drive.
+run('analyze', '--run', RUN_DIR)
+mirror_tree(RUN_DIR/'analysis', BACKUP/'runs'/RUN_ID/'analysis')
+strat = pd.read_csv(RUN_DIR/'analysis'/'stratified_auc_summary.csv')
+display(strat[strat.split.ne('dev')].pivot_table(index='system', columns=['dataset', 'split'],
+        values=['pooled_auc_mean', 'auc_within_silence_seconds_mean']).round(3))
 print('Hasil lokal:', RUN_DIR)
 print('Hasil di Drive:', BACKUP/'runs'/RUN_ID)
 '''), md(r'''## T07 — sensitivitas setelah model dibekukan (opsional)

@@ -64,6 +64,10 @@ def main():
     q.add_argument('--per-cell', type=int, default=2)
     q.add_argument('--jobs', type=int, default=1)
     q.add_argument('--backup', help='Shard backup per variant and a mirror of stress results (e.g. on Drive).')
+    q = sub.add_parser('analyze', help='Shortcut analysis of a finished run: QC/silence AUC, silence-stratified AUC.')
+    q.add_argument('--run', required=True)
+    q.add_argument('--bins', type=int, default=10)
+    q.add_argument('--out', help='Default: <run>/analysis')
     q = sub.add_parser('smoke', help='Generate explicitly synthetic signals and run the full pipeline.')
     q.add_argument('--out', default=str(ROOT/'results/smoke'))
     args = p.parse_args()
@@ -113,6 +117,9 @@ def main():
     elif args.command == 'stress':
         from src.pipeline_v9.stress import run_stress
         run_stress(args.run, args.features, args.checkpoints, args.per_cell, args.jobs, args.backup)
+    elif args.command == 'analyze':
+        from src.pipeline_v9.analysis import analyze_run
+        print('Analisis:', analyze_run(args.run, args.bins, args.out))
     elif args.command == 'smoke':
         from src.pipeline_v9.smoke import smoke
         smoke(args.out)

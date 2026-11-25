@@ -316,3 +316,44 @@ def test_composite_families_and_paired_controls_from_config(cfg):
     bad = dict(cfg, composite_families={'X': ['QC_only', 'nope']})
     with pytest.raises(ValueError, match='composite'):
         resolve_families(bad)
+
+
+def test_mirror_exact_replaces_same_size_different_content(tmp_path):
+    from src.pipeline_v9.runtime import mirror_exact
+    src, dst = tmp_path/'src', tmp_path/'dst'
+    (src/'a').mkdir(parents=True)
+    (src/'a'/'t.csv').write_text('0.1234567890123456\n')
+    (dst/'a').mkdir(parents=True)
+    (dst/'a'/'t.csv').write_text('0.1234567890123457\n')   # same size, last digit differs
+    assert mirror_exact(src, dst) == 1
+    assert (dst/'a'/'t.csv').read_text() == (src/'a'/'t.csv').read_text()
+    assert mirror_exact(src, dst) == 0
+
+
+def test_silence_stratified_auc_separates_shortcut_from_signal(tmp_path):
+    from src.pipeline_v9.analysis import analyze_run, stratified_auc
+    rng = np.random.default_rng(3)
+    n = 4000
+    label = rng.integers(0, 2, n)
+    silence = np.where(label == 0, rng.gamma(4, .35, n), rng.gamma(2, .2, n))   # real: longer silence
+    signal = label + rng.normal(0, 1, n)                                          # independent of silence
+    assert stratified_auc(label, -silence, silence)[0] < .6 < roc(label, -silence)
+    assert abs(stratified_auc(label, signal, silence)[0] - roc(label, signal)) < .03
+    analysed = rng.uniform(1, 4, n)
+    features = pd.DataFrame(dict(utterance_id=[f'u{i}' for i in range(n)], dataset='d', split='eval', label=label,
+                                 qc_original_seconds=analysed + silence, qc_analysis_seconds=analysed, qc_peak=1.,
+                                 qc_rms=.1, qc_active_ratio=.9, qc_residual_valid_ratio=1.))
+    features.to_csv(tmp_path/'features.csv', index=False)
+    scores = pd.concat([features[['utterance_id', 'dataset', 'split', 'label']].assign(system=s, seed=1, score=v)
+                        for s, v in [('shortcut', -silence), ('signal', signal)]])
+    scores.to_csv(tmp_path/'utterance_scores.csv', index=False)
+    out = analyze_run(tmp_path, bins=10)
+    table = pd.read_csv(out/'stratified_auc.csv').set_index('system')
+    assert table.loc['shortcut', 'auc_within_silence_seconds'] < .6 < table.loc['shortcut', 'pooled_auc']
+    qc = pd.read_csv(out/'qc_feature_auc.csv').set_index('quantity')
+    assert qc.loc['silence_seconds', 'direction'] == 'real lebih tinggi' and qc.loc['silence_seconds', 'auc_oriented'] > .8
+
+
+def roc(y, x):
+    from sklearn.metrics import roc_auc_score
+    return roc_auc_score(y, x)
