@@ -1,0 +1,11 @@
+dataset,split,label,n,residual_measured,modulation_measured,silence_median_s,analysed_median_s,kelas
+asvspoof2019_la,dev,0,500,500,500,1.4185625000000002,1.825,REAL
+asvspoof2019_la,dev,1,1500,1500,1500,0.67909375,2.16,FAKE
+asvspoof2019_la,eval,0,1675,1675,1675,1.3525,1.75,REAL
+asvspoof2019_la,eval,1,15600,15600,15600,0.3361562499999999,2.16,FAKE
+asvspoof2019_la,train,0,2580,2580,2580,1.2477499999999997,1.93,REAL
+asvspoof2019_la,train,1,22800,22800,22800,0.6888124999999995,2.12,FAKE
+asvspoof2021_df,external,0,187,187,187,0.741625,2.37,REAL
+asvspoof2021_df,external,1,625,625,625,0.3800625000000002,2.23,FAKE
+mlaad_tiny,external,0,953,953,953,0.9798749999999998,6.44,REAL
+mlaad_tiny,external,1,953,953,953,0.3007499999999998,6.34,FAKE

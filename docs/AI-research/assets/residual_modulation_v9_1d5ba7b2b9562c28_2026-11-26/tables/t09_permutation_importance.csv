@@ -1,0 +1,7 @@
+dataset,split,system,group,auc_drop_mean,auc_drop_sd,note
+asvspoof2019_la,eval,Residual_Modulation__lr,Residual,0.1493002372751626,0.0069997802276902,"Prediction reliance, not causal evidence"
+asvspoof2019_la,eval,Residual_Modulation__lr,Modulation,0.0867454535017221,0.0064159006458902,"Prediction reliance, not causal evidence"
+asvspoof2021_df,external,Residual_Modulation__lr,Residual,0.1709445989304812,0.0208892799386272,"Prediction reliance, not causal evidence"
+asvspoof2021_df,external,Residual_Modulation__lr,Modulation,0.0064462032085561,0.0143690246325172,"Prediction reliance, not causal evidence"
+mlaad_tiny,external,Residual_Modulation__lr,Residual,-0.0381375872734139,0.0092548300970888,"Prediction reliance, not causal evidence"
+mlaad_tiny,external,Residual_Modulation__lr,Modulation,0.0384110375475248,0.0091598993321995,"Prediction reliance, not causal evidence"

@@ -1,0 +1,25 @@
+system,metric,low,median,high,status,n_speakers,draws,scenario,seed,comparison
+MFCC_LFCC__svm_rbf-Residual_Modulation__rf,auc,0.1254315321830661,0.1546188160974618,0.1818940214156846,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+MFCC_LFCC__svm_rbf-MFCC_LFCC__lr,auc,-0.0215858623970133,-0.0111957114878097,-0.001154842053469,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+MFCC_LFCC__svm_rbf-Residual_Modulation__lr,auc,0.0996093126371881,0.1226244984664193,0.1453199891482757,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+Residual_Modulation__rf-MFCC_LFCC__lr,auc,-0.1917724369569158,-0.1659966583719066,-0.1366983659059263,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+Residual_Modulation__rf-Residual_Modulation__lr,auc,-0.0505256554183556,-0.0314815363082749,-0.0129260424961933,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+MFCC_LFCC__lr-Residual_Modulation__lr,auc,0.1109841388164075,0.1345007802432108,0.1570352245262206,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,
+QC_plus_Residual_Modulation__lr-QC_only__lr,auc,-0.0187111436111037,-0.0079549376861511,0.0032692129468933,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,QC_plus_Residual_Modulation vs QC_only (lr)
+QC_plus_Residual_Modulation__hgb-QC_only__hgb,auc,0.005556357704689,0.0169566319385071,0.0286486746059911,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,QC_plus_Residual_Modulation vs QC_only (hgb)
+QC_plus_MFCC_LFCC__lr-QC_only__lr,auc,-0.0037351822086148,0.0126726074754433,0.0291322570688598,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,QC_plus_MFCC_LFCC vs QC_only (lr)
+QC_plus_MFCC_LFCC__hgb-QC_only__hgb,auc,-0.0575089861344167,-0.0403986609339488,-0.0248887350611914,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,QC_plus_MFCC_LFCC vs QC_only (hgb)
+Residual_Modulation__lr-MFCC_LFCC__lr,auc,-0.1570352245262206,-0.1345007802432108,-0.1109841388164075,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,Residual_Modulation vs MFCC_LFCC (lr)
+Residual_Modulation__hgb-MFCC_LFCC__hgb,auc,-0.087218859060328,-0.0645939776641268,-0.04173235231808,paired_difference,67,1000.0,asvspoof2019_la__eval,2026,Residual_Modulation vs MFCC_LFCC (hgb)
+MFCC_LFCC__svm_rbf-Residual_Modulation__rf,auc,0.0043352168139534,0.0690867131341303,0.1533836251578106,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+MFCC_LFCC__svm_rbf-MFCC_LFCC__lr,auc,-0.0472511792478149,-0.0156556985102961,0.0180036453012357,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+MFCC_LFCC__svm_rbf-Residual_Modulation__lr,auc,-0.0382570809751566,0.0236720412362234,0.0961173281389089,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+Residual_Modulation__rf-MFCC_LFCC__lr,auc,-0.1723747469767607,-0.0849349299703739,-0.0139240884879484,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+Residual_Modulation__rf-Residual_Modulation__lr,auc,-0.0950788592344616,-0.0459515250882762,0.0029286189865567,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+MFCC_LFCC__lr-Residual_Modulation__lr,auc,-0.0281746768399779,0.0386858554145141,0.1147395766626479,paired_difference,72,1000.0,asvspoof2021_df__external,2026,
+QC_plus_Residual_Modulation__lr-QC_only__lr,auc,0.0093397190041485,0.0766431578130342,0.1417381128292796,paired_difference,72,1000.0,asvspoof2021_df__external,2026,QC_plus_Residual_Modulation vs QC_only (lr)
+QC_plus_Residual_Modulation__hgb-QC_only__hgb,auc,-0.0184476132655034,0.0488299931543476,0.1051937603588826,paired_difference,72,1000.0,asvspoof2021_df__external,2026,QC_plus_Residual_Modulation vs QC_only (hgb)
+QC_plus_MFCC_LFCC__lr-QC_only__lr,auc,-0.0584272625386063,0.0303069793859691,0.1303309368460821,paired_difference,72,1000.0,asvspoof2021_df__external,2026,QC_plus_MFCC_LFCC vs QC_only (lr)
+QC_plus_MFCC_LFCC__hgb-QC_only__hgb,auc,-0.0302654238494084,0.0497478606776594,0.1300638578764176,paired_difference,72,1000.0,asvspoof2021_df__external,2026,QC_plus_MFCC_LFCC vs QC_only (hgb)
+Residual_Modulation__lr-MFCC_LFCC__lr,auc,-0.114739576662648,-0.0386858554145141,0.0281746768399779,paired_difference,72,1000.0,asvspoof2021_df__external,2026,Residual_Modulation vs MFCC_LFCC (lr)
+Residual_Modulation__hgb-MFCC_LFCC__hgb,auc,-0.1676621848538018,-0.0914393402530522,-0.0318896366776523,paired_difference,72,1000.0,asvspoof2021_df__external,2026,Residual_Modulation vs MFCC_LFCC (hgb)
