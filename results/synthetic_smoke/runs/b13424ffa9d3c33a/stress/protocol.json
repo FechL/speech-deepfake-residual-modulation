@@ -1,0 +1,7 @@
+{
+  "model_sha256": "be8b74a4fc1dbf418d90083d9c04ae66d80366e8be7866ddf22d60b684ef0f16",
+  "note": "Fixed subset; frozen seed-0 models; GMM excluded. No retraining or target threshold selection.",
+  "per_cell": 1,
+  "seed": 2026,
+  "subset_sha256": "50e57ffdd65f0b7b61cd9c9379724454b4f1f659ac260416690fc5bdb2d4911d"
+}

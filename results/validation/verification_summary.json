@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-22",
+  "notebooks_schema_and_python_syntax_validated": true,
+  "primary_artifacts_sha256_verified": 54,
+  "real_audio_feature_check_excerpts": 3,
+  "seeds": [
+    2026,
+    2027,
+    2028
+  ],
+  "selected_audio_locally_available": 0,
+  "selected_utterances": 47373,
+  "stress_all_ok": true,
+  "stress_variants": [
+    "reference",
+    "lpc_12",
+    "lpc_20",
+    "trim_25db",
+    "trim_45db",
+    "no_trim",
+    "noise_snr30",
+    "noise_snr20",
+    "noise_snr10",
+    "mp3_128k",
+    "mp3_64k",
+    "mp3_32k"
+  ],
+  "synthetic_smoke_run": "/home/aliy/Coding/Myrepos/speech-deepfake-residual-modulation-new/results/synthetic_smoke/runs/b13424ffa9d3c33a",
+  "synthetic_utterances": 40,
+  "unit_tests_passed": 14,
+  "v9_manifest_metadata_identical": true,
+  "warning": "Software verification only. No full dataset experiment or research performance claim."
+}

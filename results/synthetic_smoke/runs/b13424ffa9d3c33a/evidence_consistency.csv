@@ -1,0 +1,10 @@
+seed,scenario,baseline_system,evidence_system,n,spearman_rho,spearman_p,agreement,cohen_kappa,n_both_correct,n_baseline_correct_evidence_wrong,n_baseline_wrong_evidence_correct,n_both_wrong
+2026,SYNTHETIC_SMOKE__dev,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.7818181818181817,0.0075470077810678785,1.0,1.0,10,0,0,0
+2026,SYNTHETIC_SMOKE__eval,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.6969696969696969,0.02509667588225185,0.9,0.8,9,1,0,0
+2026,SYNTHETIC_SMOKE__external,MFCC_LFCC__lr,Residual_Modulation__lr,4,1.0,0.0,1.0,1.0,4,0,0,0
+2027,SYNTHETIC_SMOKE__dev,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.7818181818181817,0.0075470077810678785,1.0,1.0,10,0,0,0
+2027,SYNTHETIC_SMOKE__eval,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.6969696969696969,0.02509667588225185,0.9,0.8,9,1,0,0
+2027,SYNTHETIC_SMOKE__external,MFCC_LFCC__lr,Residual_Modulation__lr,4,1.0,0.0,1.0,1.0,4,0,0,0
+2028,SYNTHETIC_SMOKE__dev,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.7818181818181817,0.0075470077810678785,1.0,1.0,10,0,0,0
+2028,SYNTHETIC_SMOKE__eval,MFCC_LFCC__lr,Residual_Modulation__lr,10,0.6969696969696969,0.02509667588225185,0.9,0.8,9,1,0,0
+2028,SYNTHETIC_SMOKE__external,MFCC_LFCC__lr,Residual_Modulation__lr,4,1.0,0.0,1.0,1.0,4,0,0,0

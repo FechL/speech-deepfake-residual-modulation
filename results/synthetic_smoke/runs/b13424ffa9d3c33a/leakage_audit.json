@@ -1,0 +1,7 @@
+{
+  "external_note": "Cross-dataset does not imply unseen speakers; overlap reported explicitly.",
+  "external_shared_development_speakers": [],
+  "internal_speaker_disjoint": true,
+  "rows": 40,
+  "status": "ok"
+}

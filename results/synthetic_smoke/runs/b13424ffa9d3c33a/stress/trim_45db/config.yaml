@@ -1,0 +1,117 @@
+baseline_family: MFCC_LFCC
+bootstrap_draws: 12
+complete_case: true
+evidence_family: Residual_Modulation
+families:
+- MFCC
+- LFCC
+- MFCC_LFCC
+- Residual
+- Modulation
+- Residual_Modulation
+- QC_only
+features:
+  active_db: 30.0
+  entropy_bins: 64
+  envelope_filter_order: 4
+  envelope_lowpass_hz: 40
+  envelope_sr: 100
+  epsilon: 1.0e-12
+  frame_length: 400
+  hop_length: 160
+  lpc_order: 16
+  max_seconds: 60
+  min_seconds: 0.3
+  modulation_bands:
+  - - 0.5
+    - 2
+  - - 2
+    - 4
+  - - 4
+    - 8
+  - - 8
+    - 20
+  modulation_max_hz: 20
+  n_ceps: 6
+  n_fft: 512
+  n_filters: 12
+  residual_min_energy: 1.0e-08
+  sample_rate: 16000
+  spectral_cmn: false
+  trim_db: 45.0
+gmm:
+  enabled: true
+  kinds:
+  - lfcc
+  - mfcc
+  max_frames: 2000
+  max_utterances_per_class: 4
+  n_components: 2
+group_cv_folds: 2
+minimum_bootstrap_speakers: 5
+missing_indicators: false
+model_params:
+  hgb:
+    learning_rate: 0.05
+    max_depth: 3
+    max_iter: 5
+  knn:
+    n_neighbors: 5
+  lr:
+    C: 1.0
+    max_iter: 2000
+  mlp:
+    hidden_layer_sizes:
+    - 128
+    - 64
+    max_iter: 500
+  rf:
+    min_samples_leaf: 2
+    n_estimators: 5
+  svm_rbf:
+    C: 10.0
+    gamma: scale
+  xgb:
+    colsample_bytree: 0.8
+    learning_rate: 0.05
+    max_depth: 4
+    n_estimators: 5
+    subsample: 0.8
+models:
+- lr
+- svm_rbf
+- rf
+- hgb
+- xgb
+n_jobs: 1
+permutation_repeats: 2
+pipeline_version: residual_modulation_v9
+reference_classifier: lr
+seeds:
+- 2026
+- 2027
+- 2028
+selection_metric: auc
+sensitivity_variants:
+- lpc_order: 12
+  name: lpc_12
+- lpc_order: 20
+  name: lpc_20
+- name: trim_25db
+  trim_db: 25.0
+- name: trim_45db
+  trim_db: 45.0
+- name: no_trim
+  trim_db: null
+- name: noise_snr30
+  noise_snr_db: 30
+- name: noise_snr20
+  noise_snr_db: 20
+- name: noise_snr10
+  noise_snr_db: 10
+- mp3_bitrate: 128k
+  name: mp3_128k
+- mp3_bitrate: 64k
+  name: mp3_64k
+- mp3_bitrate: 32k
+  name: mp3_32k

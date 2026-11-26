@@ -1,0 +1,5 @@
+dataset,split,label,n,extracted,coverage
+SYNTHETIC_SMOKE,eval,0,5,5,1.0
+SYNTHETIC_SMOKE,eval,1,5,5,1.0
+SYNTHETIC_SMOKE,external,0,2,2,1.0
+SYNTHETIC_SMOKE,external,1,2,2,1.0

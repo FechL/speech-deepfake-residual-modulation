@@ -1,0 +1,17 @@
+utterance_id,label,frame_start_s,figure
+synthetic_train_0_0,0,0.08,G2_label0_00.png
+synthetic_train_1_0,0,1.4,G2_label0_01.png
+synthetic_train_2_0,0,0.07,G2_label0_02.png
+synthetic_train_3_0,0,1.41,G2_label0_03.png
+synthetic_train_4_0,0,0.4,G2_label0_04.png
+synthetic_train_5_0,0,1.07,G2_label0_05.png
+synthetic_train_6_0,0,1.07,G2_label0_06.png
+synthetic_train_7_0,0,1.73,G2_label0_07.png
+synthetic_train_0_1,1,0.88,G2_label1_00.png
+synthetic_train_1_1,1,0.88,G2_label1_01.png
+synthetic_train_2_1,1,0.74,G2_label1_02.png
+synthetic_train_3_1,1,1.88,G2_label1_03.png
+synthetic_train_4_1,1,0.88,G2_label1_04.png
+synthetic_train_5_1,1,0.02,G2_label1_05.png
+synthetic_train_6_1,1,0.88,G2_label1_06.png
+synthetic_train_7_1,1,0.88,G2_label1_07.png

@@ -13,7 +13,6 @@ __pycache__/
 *.m4a
 *.zip
 *.tar*
-results/**
 checkpoints/**
 figures/**
 exports/**

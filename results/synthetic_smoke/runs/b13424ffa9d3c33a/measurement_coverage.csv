@@ -1,0 +1,9 @@
+dataset,split,label,n,residual_measured,modulation_measured
+SYNTHETIC_SMOKE,dev,0,5,5,5
+SYNTHETIC_SMOKE,dev,1,5,5,5
+SYNTHETIC_SMOKE,eval,0,5,5,5
+SYNTHETIC_SMOKE,eval,1,5,5,5
+SYNTHETIC_SMOKE,external,0,2,2,2
+SYNTHETIC_SMOKE,external,1,2,2,2
+SYNTHETIC_SMOKE,train,0,8,8,8
+SYNTHETIC_SMOKE,train,1,8,8,8

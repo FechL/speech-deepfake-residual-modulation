@@ -1,0 +1,5 @@
+fold,family,classifier,auc,n_train,n_validation,status
+0,MFCC_LFCC,lr,1.0,8,8,ok
+0,Residual_Modulation,lr,1.0,8,8,ok
+1,MFCC_LFCC,lr,1.0,8,8,ok
+1,Residual_Modulation,lr,1.0,8,8,ok

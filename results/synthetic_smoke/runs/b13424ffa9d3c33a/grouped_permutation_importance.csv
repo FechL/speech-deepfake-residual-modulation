@@ -1,0 +1,5 @@
+dataset,split,system,group,auc_drop_mean,auc_drop_sd,note
+SYNTHETIC_SMOKE,eval,Residual_Modulation__lr,Residual,0.36,0.0,"Prediction reliance, not causal evidence"
+SYNTHETIC_SMOKE,eval,Residual_Modulation__lr,Modulation,0.0,0.0,"Prediction reliance, not causal evidence"
+SYNTHETIC_SMOKE,external,Residual_Modulation__lr,Residual,0.25,0.0,"Prediction reliance, not causal evidence"
+SYNTHETIC_SMOKE,external,Residual_Modulation__lr,Modulation,0.0,0.0,"Prediction reliance, not causal evidence"

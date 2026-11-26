@@ -1,0 +1,13 @@
+variant,status,n
+reference,ok,14
+lpc_12,ok,14
+lpc_20,ok,14
+trim_25db,ok,14
+trim_45db,ok,14
+no_trim,ok,14
+noise_snr30,ok,14
+noise_snr20,ok,14
+noise_snr10,ok,14
+mp3_128k,ok,14
+mp3_64k,ok,14
+mp3_32k,ok,14

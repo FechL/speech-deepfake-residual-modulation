@@ -1,0 +1,4 @@
+source,label,software_check_only,excerpt_seconds,analysis_status,residual_valid_ratio,modulation_centroid_hz
+/home/aliy/Coding/Myrepos/speech-deepfake-glottal/data/sample/ADDITIONAL/REAL/audio_06.wav,0,True,3.0,ok,1.0,4.490474064796346
+/home/aliy/Coding/Myrepos/speech-deepfake-glottal/data/sample/ADDITIONAL/FAKE/E2TTS/person_1/audio_03.wav,1,True,3.0,ok,0.9438202247191011,3.9751008107354737
+/home/aliy/Coding/Myrepos/speech-deepfake-glottal/data/sample/ADDITIONAL/FAKE/E2TTS/person_1/audio_04.wav,1,True,3.0,ok,1.0,4.606409389076845

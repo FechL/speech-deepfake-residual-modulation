@@ -1,0 +1,91 @@
+{
+  "audio_sha256": {
+    "synthetic_eval_13_0": "5b18e19d8ccdfdae620477792cda1d19da6262f669afeed8dc19327a889b9f8b",
+    "synthetic_eval_13_1": "5155f62cb6c3f28305190ba3fa9e6218cca3227b44e4d3a39bd4f7841183ba72",
+    "synthetic_eval_14_0": "18d9ebec0592daa01d191052b91706114047b4e364e7275cb78cb8e2bc1f7578",
+    "synthetic_eval_14_1": "db93a579f4d29e21fecbb2ae807ea0805eb8faf33b50c6c9286429904f766804",
+    "synthetic_eval_15_0": "47cc7faf55d83586d6c81571f9006404c9e94ffd74fd75243edd9beaa4f39437",
+    "synthetic_eval_15_1": "25a764c8dedc62fa8c440c60772f0a9137086991239d5996c5d02b23300389f7",
+    "synthetic_eval_16_0": "9d4e18773973e7fa72b8a84c2165c949c7be86d1a62beb12d1a9a478801ae902",
+    "synthetic_eval_16_1": "d7ee2a4198dd4aea9bf5a880fb286639cbcd2cd0d3bd7fc8eb531df08893b4c3",
+    "synthetic_eval_17_0": "309730ee7516b569e193beb5abb857619da32d343ace71d40c34f557e7a3ad4e",
+    "synthetic_eval_17_1": "959382144d5335d79241940d0968aa66e867bb555ccb02639645f6606a2bb6cd",
+    "synthetic_external_18_0": "23675b1acf034b90475f3a92f5835d61413b4fabf64648e02ca567df4437a9b4",
+    "synthetic_external_18_1": "4d2f087079feebacdf0228d3f781f9d6d43c0a192b08b3295c9032d83e8ac2b5",
+    "synthetic_external_19_0": "70d521e7542c4471c967936f31cf3a08515931b158ce53c66c0e0cddf1458b24",
+    "synthetic_external_19_1": "b6b87b347ecf9647bb8a4b519566e904b22f71e364ae540b18347ad19f23f1d7"
+  },
+  "code": {
+    "scripts/run_pipeline_v9.py": "3e448decf9dbe59a1f43bdcf60bf720bfdc877b346215cf15ed2f0220531228d",
+    "src/pipeline_v9/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/pipeline_v9/baseline_gmm.py": "dbc39ebe86a77d2198f44076ae367d7ab7e6404df536ad3ab1d255d4f9520a68",
+    "src/pipeline_v9/channels.py": "302e9c649a9b0213b41c75273094208b30529de9c3c57ba5d03d8b50ae069f9c",
+    "src/pipeline_v9/common.py": "cf9f06e3759a53163a9abbf5e6b2187fb3ff2fb9cd46883856f6ac68f9abb78e",
+    "src/pipeline_v9/config.py": "1bb4e9aff51a9f97c9857cd443d658170600a9f16a94a75f1b651c1f571a1604",
+    "src/pipeline_v9/data.py": "25c64de08dbc548c5abaa1b7cebfa2622f86acc523e16afe6bc260d9247c3bfb",
+    "src/pipeline_v9/evaluation.py": "627d918958b2714badeb88dd41f6fbc1b7e7c770d8859271a56fe48ef5b293ec",
+    "src/pipeline_v9/features.py": "88c49838c75c7da23f7b766d371dfc4f40dcec824ce494edc9e4a5c2ca83d12a",
+    "src/pipeline_v9/runtime.py": "d408c1cb69dab7ed58515dbe9392c438aeefaf032c80366dface741076df2483",
+    "src/pipeline_v9/smoke.py": "3983d06c8353e20ab9e0582c41530f5a9e08665dbe9b16295d6885e2dc4bd7a2",
+    "src/pipeline_v9/stress.py": "bea6d37fb2cd0ab668f29eeb2e6c4d19537faa7d6de0bc8d197d02948062989d",
+    "src/pipeline_v9/training.py": "8cfe1d001993b659b71918384cf32753e95cda3fea218cc200622b93fe137131",
+    "src/pipeline_v9/visuals.py": "2324c7a14d8e7305a38fc39c81f4dfe8f03ac936b884038e3fa5d50210d16c12"
+  },
+  "features": {
+    "active_db": 30.0,
+    "entropy_bins": 64,
+    "envelope_filter_order": 4,
+    "envelope_lowpass_hz": 40,
+    "envelope_sr": 100,
+    "epsilon": 1e-12,
+    "frame_length": 400,
+    "hop_length": 160,
+    "lpc_order": 16,
+    "max_seconds": 60,
+    "min_seconds": 0.3,
+    "modulation_bands": [
+      [
+        0.5,
+        2
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        8,
+        20
+      ]
+    ],
+    "modulation_max_hz": 20,
+    "n_ceps": 6,
+    "n_fft": 512,
+    "n_filters": 12,
+    "noise_snr_db": 20,
+    "residual_min_energy": 1e-08,
+    "sample_rate": 16000,
+    "spectral_cmn": false,
+    "trim_db": 35.0
+  },
+  "identity_hash": "fdba574f025fc74946e25c09ddf64ee6c591d46ffd69d1f42858eaedb3318479",
+  "manifest_sha256": "cf8c72d6211868aa676f3cf09e525249faced48d298ff0d434bc7a1071bf9bb1",
+  "runtime": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "joblib": "1.6.0",
+      "librosa": "1.0.1",
+      "matplotlib": "3.11.2",
+      "numpy": "2.5.5",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "soundfile": "0.14.0",
+      "xgboost": "3.4.1"
+    },
+    "python": "3.14.4"
+  }
+}

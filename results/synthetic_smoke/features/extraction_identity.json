@@ -1,0 +1,116 @@
+{
+  "audio_sha256": {
+    "synthetic_dev_10_0": "d685b64175f745e152de116bf17064c95c814650b97301a32e6316dda7e2fb26",
+    "synthetic_dev_10_1": "fbfe0e721b12539bbbfbd430014a5f11b0bd23e6ffc314e9708995a57ba25e33",
+    "synthetic_dev_11_0": "e8a0ba2a77adad70b1e07fe9732c383afe070cb65bc408861fef0f4e58ee9679",
+    "synthetic_dev_11_1": "5f0237cb4540412f8ebf3f84b9e2791973a9151bc04cf6b904af8891e959d1d0",
+    "synthetic_dev_12_0": "984bd26c3a12ab091189497b9b5c8ddd5a46d077b515538036a3e8d51df77345",
+    "synthetic_dev_12_1": "5bcbcf80cecdb2239115a9c67de8149dddfca63a1ef0edd87016bedaa9569576",
+    "synthetic_dev_8_0": "7696d19fab2e9c4a827b1616dc350ec7ee9cf844a2c376c7b26df887dfb2311b",
+    "synthetic_dev_8_1": "6c8da7c5f0f053b77d6a3abf06610b9babc6f688f359caaf349ab198f53ba064",
+    "synthetic_dev_9_0": "a5ca772781ba2687b7556372d687f46b6c40a7797b3f74b751b1351972a0cc2b",
+    "synthetic_dev_9_1": "be2d2330edeecdc3cc3e9d44bda698ce82257c2c57ab74be3f90fda162171c09",
+    "synthetic_eval_13_0": "5b18e19d8ccdfdae620477792cda1d19da6262f669afeed8dc19327a889b9f8b",
+    "synthetic_eval_13_1": "5155f62cb6c3f28305190ba3fa9e6218cca3227b44e4d3a39bd4f7841183ba72",
+    "synthetic_eval_14_0": "18d9ebec0592daa01d191052b91706114047b4e364e7275cb78cb8e2bc1f7578",
+    "synthetic_eval_14_1": "db93a579f4d29e21fecbb2ae807ea0805eb8faf33b50c6c9286429904f766804",
+    "synthetic_eval_15_0": "47cc7faf55d83586d6c81571f9006404c9e94ffd74fd75243edd9beaa4f39437",
+    "synthetic_eval_15_1": "25a764c8dedc62fa8c440c60772f0a9137086991239d5996c5d02b23300389f7",
+    "synthetic_eval_16_0": "9d4e18773973e7fa72b8a84c2165c949c7be86d1a62beb12d1a9a478801ae902",
+    "synthetic_eval_16_1": "d7ee2a4198dd4aea9bf5a880fb286639cbcd2cd0d3bd7fc8eb531df08893b4c3",
+    "synthetic_eval_17_0": "309730ee7516b569e193beb5abb857619da32d343ace71d40c34f557e7a3ad4e",
+    "synthetic_eval_17_1": "959382144d5335d79241940d0968aa66e867bb555ccb02639645f6606a2bb6cd",
+    "synthetic_external_18_0": "23675b1acf034b90475f3a92f5835d61413b4fabf64648e02ca567df4437a9b4",
+    "synthetic_external_18_1": "4d2f087079feebacdf0228d3f781f9d6d43c0a192b08b3295c9032d83e8ac2b5",
+    "synthetic_external_19_0": "70d521e7542c4471c967936f31cf3a08515931b158ce53c66c0e0cddf1458b24",
+    "synthetic_external_19_1": "b6b87b347ecf9647bb8a4b519566e904b22f71e364ae540b18347ad19f23f1d7",
+    "synthetic_train_0_0": "fc911030949603d5b60152d3ab49b5fb4ba547f1c648d468f121b5d81ad47f7a",
+    "synthetic_train_0_1": "d7c31b1263533c84ff01f2ea7fa555755f438ff6bd640bf851f0bc827d1890ae",
+    "synthetic_train_1_0": "ed140d857d8d670ae17dd3c8393a05432473fe4cb19d659ca8a802e49755cffd",
+    "synthetic_train_1_1": "230107cb294c5999a92a49c1d08e51001c517ee4980fab07fc161570c4125bf8",
+    "synthetic_train_2_0": "2895eb4b9f72f5e63da2d504778839846f7ed085b3b8fda7e29f4a5aba696258",
+    "synthetic_train_2_1": "ecd727bcb0f94ffa3c1840041937ba9ae1eeece456fc700537fde8351f6c45a4",
+    "synthetic_train_3_0": "604c8432b2c69409486560d261b84f605b4f88dd637c8597efdbab6b593452d4",
+    "synthetic_train_3_1": "2a13965336b6fa2e58d819c7105e13b7518f0ea854c4db3f7243cf465ed8a5d3",
+    "synthetic_train_4_0": "6986104a3533857200edaf2b78a87045994f0665420a43b12076448d543200a0",
+    "synthetic_train_4_1": "5133e5adc68bf3a11427b62c7f7d9e8d45a67477c778e8a1ba3e934962d59d00",
+    "synthetic_train_5_0": "a2749fc8cf848a88086b546d56ad6e6cdf61cbc48939822c9a87044aa6774311",
+    "synthetic_train_5_1": "be86224c61b9745a46fa09e4eca6ce500194d9bfd5402553bc62ee662c4a80c1",
+    "synthetic_train_6_0": "03079187063c5e68807699ea14c58bb4548e707b51211423879af28b6122c827",
+    "synthetic_train_6_1": "070081198ea3276071c7c3bb90da3bae14d9a3294d0756d25e3354d67d567af0",
+    "synthetic_train_7_0": "2ad112bc2db7ec3782e11910dac82b7c0a795e8ad4de05772ddf3e9300eb4a9a",
+    "synthetic_train_7_1": "ae9032046910a6b6105b7bc3e56d16044db4238b1600c52cfaa19af0963982d6"
+  },
+  "code": {
+    "scripts/run_pipeline_v9.py": "3e448decf9dbe59a1f43bdcf60bf720bfdc877b346215cf15ed2f0220531228d",
+    "src/pipeline_v9/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/pipeline_v9/baseline_gmm.py": "dbc39ebe86a77d2198f44076ae367d7ab7e6404df536ad3ab1d255d4f9520a68",
+    "src/pipeline_v9/channels.py": "302e9c649a9b0213b41c75273094208b30529de9c3c57ba5d03d8b50ae069f9c",
+    "src/pipeline_v9/common.py": "cf9f06e3759a53163a9abbf5e6b2187fb3ff2fb9cd46883856f6ac68f9abb78e",
+    "src/pipeline_v9/config.py": "1bb4e9aff51a9f97c9857cd443d658170600a9f16a94a75f1b651c1f571a1604",
+    "src/pipeline_v9/data.py": "25c64de08dbc548c5abaa1b7cebfa2622f86acc523e16afe6bc260d9247c3bfb",
+    "src/pipeline_v9/evaluation.py": "627d918958b2714badeb88dd41f6fbc1b7e7c770d8859271a56fe48ef5b293ec",
+    "src/pipeline_v9/features.py": "88c49838c75c7da23f7b766d371dfc4f40dcec824ce494edc9e4a5c2ca83d12a",
+    "src/pipeline_v9/runtime.py": "d408c1cb69dab7ed58515dbe9392c438aeefaf032c80366dface741076df2483",
+    "src/pipeline_v9/smoke.py": "3983d06c8353e20ab9e0582c41530f5a9e08665dbe9b16295d6885e2dc4bd7a2",
+    "src/pipeline_v9/stress.py": "bea6d37fb2cd0ab668f29eeb2e6c4d19537faa7d6de0bc8d197d02948062989d",
+    "src/pipeline_v9/training.py": "8cfe1d001993b659b71918384cf32753e95cda3fea218cc200622b93fe137131",
+    "src/pipeline_v9/visuals.py": "2324c7a14d8e7305a38fc39c81f4dfe8f03ac936b884038e3fa5d50210d16c12"
+  },
+  "features": {
+    "active_db": 30.0,
+    "entropy_bins": 64,
+    "envelope_filter_order": 4,
+    "envelope_lowpass_hz": 40,
+    "envelope_sr": 100,
+    "epsilon": 1e-12,
+    "frame_length": 400,
+    "hop_length": 160,
+    "lpc_order": 16,
+    "max_seconds": 60,
+    "min_seconds": 0.3,
+    "modulation_bands": [
+      [
+        0.5,
+        2
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        8,
+        20
+      ]
+    ],
+    "modulation_max_hz": 20,
+    "n_ceps": 6,
+    "n_fft": 512,
+    "n_filters": 12,
+    "residual_min_energy": 1e-08,
+    "sample_rate": 16000,
+    "spectral_cmn": false,
+    "trim_db": 35.0
+  },
+  "identity_hash": "a3b7b3bc3732a8cb320c634950d8c33ebe6c9c492e345d04440ce9cac0d927c1",
+  "manifest_sha256": "1300f13ba8aa1e5aebe4bdea6f00ca7aac5144060f96fa9cd4c7b00899f9b45e",
+  "runtime": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "joblib": "1.6.0",
+      "librosa": "1.0.1",
+      "matplotlib": "3.11.2",
+      "numpy": "2.5.5",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "soundfile": "0.14.0",
+      "xgboost": "3.4.1"
+    },
+    "python": "3.14.4"
+  }
+}
