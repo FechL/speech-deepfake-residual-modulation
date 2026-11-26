@@ -180,10 +180,11 @@ if RUN_STRESS:
     display(pd.read_csv(RUN_DIR/'stress'/'variant_status.csv'))
     metrics = pd.read_csv(RUN_DIR/'stress'/'metrics.csv')
     display(metrics.pivot_table(index='variant', columns=['dataset', 'system'], values='auc').round(3))
-'''), md(r'''## T08 — ablation pita modulasi (opsional, ±1,5–2 jam training, tanpa ekstraksi ulang)
-Melatih ulang dengan `configs/residual_modulation_v9_band_ablation.yaml`: model modulasi tanpa satu fitur energi pita.
-Fitur memakai cache T04 yang sama. Centroid/entropy tetap membawa informasi spektrum penuh, jadi ini ablation fitur pita,
-bukan penghapusan informasi frekuensi. Eksperimen development terpisah; jangan memilih konfigurasi dari hasil eksternal.
+'''), md(r'''## T08 — ablation pita modulasi (opsional, ±1–2 jam training, tanpa ekstraksi ulang)
+Melatih ulang dengan `configs/residual_modulation_v9_band_ablation.yaml`: tiap pita modulasi **sendirian**, keempat pita
+tanpa centroid/entropy/variabilitas, dan fitur bentuk tanpa pita. Energi pita berjumlah ≈1, jadi "tanpa satu pita"
+tidak informatif (bisa direkonstruksi dari tiga sisanya). Fitur memakai cache T04 yang sama; GMM dimatikan.
+Eksperimen development terpisah; jangan memilih konfigurasi dari hasil eksternal.
 '''), code(r'''RUN_ABLATION = False   # ubah ke True untuk menjalankan
 if RUN_ABLATION:
     ABLATION_CONFIG = INPUTS/'config_band_ablation.yaml'

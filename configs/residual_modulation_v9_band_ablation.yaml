@@ -33,17 +33,30 @@ features:
   - - 8
     - 20
 families:
-- MFCC
-- LFCC
 - MFCC_LFCC
-- Residual
-- Modulation
 - Residual_Modulation
-- QC_only
-- Modulation_without_band_0p5_2
-- Modulation_without_band_2_4
-- Modulation_without_band_4_8
-- Modulation_without_band_8_20
+- Modulation
+- Modulation_bands_only
+- Modulation_shape_only
+- Modulation_band_0p5_2_only
+- Modulation_band_2_4_only
+- Modulation_band_4_8_only
+- Modulation_band_8_20_only
+column_families:
+  Modulation_bands_only: [mod_band_0p5_2, mod_band_2_4, mod_band_4_8, mod_band_8_20]
+  Modulation_shape_only: [mod_centroid_hz, mod_entropy_nats, mod_envelope_variability]
+  Modulation_band_0p5_2_only: [mod_band_0p5_2]
+  Modulation_band_2_4_only: [mod_band_2_4]
+  Modulation_band_4_8_only: [mod_band_4_8]
+  Modulation_band_8_20_only: [mod_band_8_20]
+paired_comparisons:
+- [Modulation, Modulation_bands_only]
+- [Modulation, Modulation_shape_only]
+- [Modulation_bands_only, Modulation_band_0p5_2_only]
+- [Modulation_bands_only, Modulation_band_2_4_only]
+- [Modulation_bands_only, Modulation_band_4_8_only]
+- [Modulation_bands_only, Modulation_band_8_20_only]
+paired_classifiers: [lr, hgb]
 models:
 - lr
 - svm_rbf
@@ -54,7 +67,7 @@ reference_classifier: lr
 missing_indicators: false
 complete_case: true
 gmm:
-  enabled: true
+  enabled: false
   kinds:
   - lfcc
   - mfcc

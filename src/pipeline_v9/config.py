@@ -4,12 +4,19 @@ from .features import feature_families
 
 
 def resolve_families(cfg):
-    """Base families from features.py plus `composite_families` (unions of base families) from config.
+    """Base families from features.py, `column_families` (explicit columns) and `composite_families`
+    (unions of families) from config.
 
-    Composites live in config, not in features.py, so adding a control model never changes the
+    Both live in config, not in features.py, so adding a control model never changes the
     feature-extraction code and therefore never invalidates an extracted feature cache.
     """
     families = feature_families(cfg['features'])
+    known = {c for columns in families.values() for c in columns}
+    # column_families: explicit column subsets (e.g. one modulation band alone) for ablations.
+    for name, columns in (cfg.get('column_families') or {}).items():
+        if name in families or not columns or not set(columns) <= known or len(set(columns)) != len(columns):
+            raise ValueError(f'column_families {name} tidak valid.')
+        families[name] = list(columns)
     for name, parts in (cfg.get('composite_families') or {}).items():
         if name in families or not parts or not set(parts) <= set(families):
             raise ValueError(f'composite_families {name} tidak valid.')

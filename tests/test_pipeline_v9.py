@@ -318,6 +318,20 @@ def test_composite_families_and_paired_controls_from_config(cfg):
         resolve_families(bad)
 
 
+def test_band_ablation_uses_single_band_column_families():
+    """Band energies are proportions summing to ~1, so dropping one band is recoverable from the
+    rest; the ablation instead trains each band alone and the bands without centroid/entropy."""
+    from src.pipeline_v9.config import load_config, resolve_families
+    abl = load_config(ROOT/'configs/residual_modulation_v9_band_ablation.yaml')
+    families = resolve_families(abl)
+    for band in ['0p5_2', '2_4', '4_8', '8_20']:
+        assert families[f'Modulation_band_{band}_only'] == [f'mod_band_{band}']
+    assert set(families['Modulation_bands_only']) | set(families['Modulation_shape_only']) == set(families['Modulation'])
+    assert not abl['gmm']['enabled']
+    with pytest.raises(ValueError, match='column_families'):
+        resolve_families(dict(abl, column_families={'X': ['mod_band_2_4', 'nope']}))
+
+
 def test_mirror_exact_replaces_same_size_different_content(tmp_path):
     from src.pipeline_v9.runtime import mirror_exact
     src, dst = tmp_path/'src', tmp_path/'dst'
